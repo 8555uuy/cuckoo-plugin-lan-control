@@ -1,0 +1,36 @@
+{
+  "id": "lan-control",
+  "name": "局域网控制",
+  "version": "0.2.0",
+  "description": "通过局域网（手机/平板/其他设备）访问 Cuckoo。侧边栏显示二维码，手机扫码即开；支持密码门令。",
+  "author": "8555uuy",
+  "minAppVersion": "0.8.8",
+  "config": {
+    "port": {
+      "type": "number",
+      "label": "服务端口",
+      "description": "HTTP 服务端口",
+      "default": 18800,
+      "min": 1024,
+      "max": 65535
+    },
+    "host": {
+      "type": "string",
+      "label": "绑定地址",
+      "description": "0.0.0.0 = 局域网可访问；127.0.0.1 = 仅本机",
+      "default": "0.0.0.0"
+    },
+    "autoStart": {
+      "type": "boolean",
+      "label": "自动启动",
+      "description": "插件加载时自动启动服务",
+      "default": true
+    },
+    "password": {
+      "type": "string",
+      "label": "访问密码",
+      "description": "手机访问时需输入的密码；留空则不校验",
+      "default": ""
+    }
+  }
+}
