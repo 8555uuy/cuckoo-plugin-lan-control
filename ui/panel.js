@@ -51,6 +51,7 @@ const POLL = '(function(){' +
     'var on=(s.running&&s.enabled!==false);' +
     'setStatus(on,on?"运行中":(s.enabled===false?"已关闭":"已停止"));' +
     'var c=g("lc-reqs");if(c)c.textContent=s.totalRequests||0;' +
+    'var cc=g("lc-clients");if(cc)cc.textContent=s.wsClients||0;' +
     'var tg=g("lc-toggle");if(tg&&document.activeElement!==tg)tg.checked=s.enabled!==false;' +
     'refreshQr(on);' +
   '}' +
@@ -90,6 +91,7 @@ const HTML = [
     '<div class="ck-lc-row"><span class="ck-lc-k">局域网</span><code class="ck-lc-v" id="lc-lan">-</code></div>',
     '<div class="ck-lc-row"><span class="ck-lc-k">本机</span><code class="ck-lc-v" id="lc-local">-</code></div>',
     '<div class="ck-lc-row"><span class="ck-lc-k">总请求</span><code class="ck-lc-v" id="lc-reqs">0</code></div>',
+    '<div class="ck-lc-row"><span class="ck-lc-k">连接设备</span><code class="ck-lc-v" id="lc-clients">0</code></div>',
     '<div class="ck-lc-qr"><div class="ck-lc-qr-box" id="lc-qr-box"><div class="ck-lc-qr-empty">加载中…</div></div><div class="ck-lc-qr-cap" id="lc-qr-cap"></div></div>',
     '<div class="ck-lc-hint">手机扫码即可打开（需与电脑同一局域网）。</div>',
     '<div class="ck-lc-sec">',

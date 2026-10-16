@@ -15,6 +15,10 @@ const fs = require('node:fs');
 
 const PLUGIN_ID = 'lan-control';
 
+// 双向控制桥（WebSocket）：手机 ↔ 电脑
+const { attach: attachWsBridge } = require(path.join(__dirname, '..', 'lib', 'control.js'));
+let wsBridge = null;
+
 // 二维码库（qrcode-generator，CommonJS）——本地 lib/ 下，离线可用
 let _qrcode = null;
 function getQrcode() {
@@ -260,13 +264,37 @@ function start() {
           return;
         }
 
-        // 主页
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(homePage(lanUrl()));
+        // 控制页（手机端）—— 根路径直接进控制页，/control 也兼容
+        if (url === '/' || url === '/control') {
+          try {
+            const file = path.join(__dirname, '..', 'ui', 'mobile.html');
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(fs.readFileSync(file, 'utf-8'));
+          } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('control page not found');
+          }
+          return;
+        }
+
+        // 其它路径 → 404
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('not found');
       } catch (e) {
         try { res.writeHead(500); res.end('error'); } catch (_) { /* ignore */ }
       }
     });
+    // 双向控制桥：挂到同一 http 服务（/ws 路径）
+    try {
+      wsBridge = attachWsBridge(server, {
+        path: '/ws',
+        isAuthed: (req) => isAuthed(req, readConfig()),
+      });
+      console.log('[lan-control] WebSocket 桥已挂载: /ws');
+    } catch (e) {
+      console.log('[lan-control] WebSocket 桥挂载失败: ' + (e && e.message));
+      wsBridge = null;
+    }
     server.listen(cfg.port, cfg.host, () => {
       listenPort = cfg.port;
       console.log('[lan-control] 服务已启动: http://' + cfg.host + ':' + cfg.port);
@@ -314,6 +342,7 @@ try {
       startedAt: startedAt,
       totalRequests: totalRequests,
       lanIPs: getLanIPs(),
+      wsClients: wsBridge ? wsBridge.clientCount() : 0,
     };
   };
   table[PLUGIN_ID + ':qr'] = function () {
@@ -333,6 +362,12 @@ try {
   // 生成随机密码（仅返回，不落盘；由面板决定是否保存）
   table[PLUGIN_ID + ':randomPassword'] = function () {
     return { password: randomPassword(10) };
+  };
+  // 主进程 → 插件：AI 事件（供 WS 广播给手机）
+  table[PLUGIN_ID + ':onEvent'] = function (payload) {
+    if (wsBridge) {
+      try { wsBridge.broadcast(payload); } catch (_) { /* ignore */ }
+    }
   };
   table[PLUGIN_ID + ':toggle'] = async function (args) {
     const want = !args || args.enabled !== false;
