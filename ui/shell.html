@@ -2018,6 +2018,8 @@ html,body{background:#16181d!important;color:#e6e8eb!important;}
   var curAi = null, curThink = null, curTurn = null, toolMap = {}, busy = false, lastAi = '';
   // 当前会话 id（null=尚未确定）。手机端据此过滤事件，避免不同对话的消息串门。
   var curSessionId = null;
+  // 手机自己刚发出的用户消息（text → 时间戳），用于回显去重。
+  var pendingUserTexts = {};
 
   function atBottom() { return $stream.scrollHeight - $stream.scrollTop - $stream.clientHeight < 80; }
   function toBottom() { $stream.scrollTop = $stream.scrollHeight; }
@@ -2102,6 +2104,18 @@ html,body{background:#16181d!important;color:#e6e8eb!important;}
         resetStream(true, '已切换会话');
       }
     }
+    if (t === 'user-message') {
+      var ut = String(m.text || '');
+      if (!ut) return;
+      var nowMs = Date.now();
+      // 手机自己刚发的（本地已显示）→ 跳过；否则是电脑发的 → 显示
+      if (pendingUserTexts[ut] && nowMs - pendingUserTexts[ut] < 8000) {
+        delete pendingUserTexts[ut];
+        return;
+      }
+      userMsg(ut); toBottom();
+      return;
+    }
     if (t === 'stream') {
       var tk = String(m.think || '').trim();
       if (tk) { if (!curThink) curThink = thinkEl(); curThink.body.textContent = tk; }
@@ -2137,6 +2151,7 @@ html,body{background:#16181d!important;color:#e6e8eb!important;}
     if (busy) { send({ type: 'stop' }); return; }
     var v = $input.value.trim(); if (!v) return;
     if (!send({ type: 'send', text: v })) { sysMsg('err', '未连接'); return; }
+    pendingUserTexts[v] = Date.now();   // 标记：等回显时去重
     curTurn = null; curAi = null; curThink = null; lastAi = '';
     userMsg(v); toBottom(); $input.value = ''; grow();
   }
