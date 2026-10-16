@@ -296,12 +296,25 @@ function start() {
         if (url === '/' || url === '/shell') {
           try {
             const file = path.join(__dirname, '..', 'ui', 'shell.html');
-            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(fs.readFileSync(file, 'utf-8'));
+            const html = fs.readFileSync(file, 'utf-8');
+            // 注入版本标记（便于确认手机加载的是新版）
+            const stamp = '<!-- lc-shell v' + fs.statSync(file).mtime.getTime() + ' -->';
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate' });
+            res.end(stamp + html);
           } catch (e) {
             res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
             res.end('shell page not found');
           }
+          return;
+        }
+
+        // 版本探针（手机可访问 /version 确认服务端版本）
+        if (url === '/version') {
+          try {
+            const f = path.join(__dirname, '..', 'ui', 'shell.html');
+            res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+            res.end('shell mtime=' + new Date(fs.statSync(f).mtime).toISOString() + '\nsize=' + fs.statSync(f).size + '\nok');
+          } catch (e) { res.writeHead(500); res.end(String(e)); }
           return;
         }
 
