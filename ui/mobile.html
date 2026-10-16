@@ -81,6 +81,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
   var currentBubble = null;
   var toolBubbles = new Map();
   var stoppedRetry = false;
+  var lastAiText = '';
   var $chat = document.getElementById('chat');
   var $input = document.getElementById('input');
   var $status = document.getElementById('status');
@@ -151,11 +152,15 @@ button:disabled{opacity:.5;cursor:not-allowed}
         scrollBottom();
       }
     } else if (t === 'assistant-done') {
+      var doneText = String(msg.text || '').trim();
       if (currentBubble) {
-        if (msg.text) currentBubble.textContent = msg.text;
+        if (doneText) currentBubble.textContent = doneText;
         currentBubble = null;
-      } else if (msg.text) {
-        addBubble('ai', msg.text);
+        lastAiText = doneText;
+      } else if (doneText && doneText !== lastAiText) {
+        // 去重：相同内容不重复显示（assistant-done 可能被上报两次）
+        addBubble('ai', doneText);
+        lastAiText = doneText;
       }
     } else if (t === 'tool-start') {
       var firstLine = String(msg.code || '').split(String.fromCharCode(10))[0].slice(0, 80);
@@ -199,6 +204,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
     addBubble('user', v);
     $input.value = '';
     currentBubble = null;
+    lastAiText = '';
   }
 
   document.getElementById('btn-send').onclick = submit;
