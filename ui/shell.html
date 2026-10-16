@@ -1173,19 +1173,79 @@
   .ck-snip-icon-placeholder { visibility: hidden; }
 
 
-  /* 手机端：默认展开侧栏，占满宽度（不做悬浮） */
-  .ck-sidebar { position: static !important; width: 100% !important; }
-  .ck-sidebar.ck-collapsed { width: 100% !important; }
-  .ck-panel { position: static !important; flex: 1 !important; width: auto !important; box-shadow: none !important; }
-  .ck-activitybar { width: 46px !important; }
-  .shell { height: 100vh; height: 100dvh; }
-  .toolbar { display: none !important; }        /* 顶部工具栏（窗口控制）手机端隐藏 */
-  .ck-sidebar-resizer { display: none !important; } /* 禁拖拽调宽 */
+  /* 手机端布局：对话流为主，侧栏为抽屉 */
+  .shell { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+  .toolbar { display: none !important; }
   .ck-win-divider, .ck-win-controls { display: none !important; }
-  .viewport { display: none !important; }        /* 电脑端 AI 网页区，手机端不显示 */
+  .statusbar { display: none !important; }
+  .ck-sidebar-resizer { display: none !important; }
+  .ck-sidebar { width: 100% !important; height: 100% !important; position: static !important; border-right: none !important; }
+  .ck-activitybar { width: 46px !important; }
+  .ck-panel { flex: 1 !important; min-width: 0 !important; box-shadow: none !important; }
   body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
-  .ck-list-item { padding: 12px 14px; }          /* 触控加大点击区 */
+  .ck-list-item { padding: 12px 14px; }
   .ck-icon-btn { width: 36px; height: 36px; }
+
+  /* 对话流 */
+  .m-stream { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px 0 4px; background: var(--ck-bg); }
+  .m-stream::-webkit-scrollbar { width: 0; }
+  .m-wrap { max-width: 720px; margin: 0 auto; padding: 0 14px; }
+  .m-empty { text-align: center; color: var(--ck-text-dim); padding: 18vh 24px 0; }
+  .m-empty-icon { display: flex; justify-content: center; margin-bottom: 14px; color: var(--ck-primary); }
+  .m-empty-icon svg { width: 38px; height: 38px; }
+  .m-empty-t1 { color: var(--ck-text-2); font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .m-empty-t2 { font-size: 12px; }
+  .m-msg { margin-bottom: 16px; animation: m-fade .16s ease; }
+  @keyframes m-fade { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:none} }
+  .m-msg.user { display: flex; justify-content: flex-end; }
+  .m-msg.user .m-bubble { max-width: 82%; background: var(--ck-surface-hover); color: var(--ck-text); padding: 9px 13px; border-radius: 10px; border: 1px solid var(--ck-border); white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+  .m-msg.ai .m-prefix { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; color: var(--ck-primary); letter-spacing: .4px; margin-bottom: 7px; }
+  .m-msg.ai .m-prefix svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .m-msg.ai .m-body { font-size: 14px; line-height: 1.75; color: var(--ck-text); word-break: break-word; white-space: pre-wrap; }
+  .m-cursor { display: inline-block; width: 7px; height: 15px; margin-left: 2px; background: var(--ck-primary); vertical-align: text-bottom; animation: m-blink 1s step-end infinite; }
+  @keyframes m-blink { 50%{opacity:0} }
+  .m-sys { display: flex; justify-content: center; padding: 6px 0; }
+  .m-sys span { font-size: 12px; color: var(--ck-text-dim); padding: 4px 12px; border-radius: 6px; background: var(--ck-surface); }
+  .m-sys.err span { color: var(--ck-danger); }
+  .m-think { margin-bottom: 10px; border-left: 2px solid var(--ck-border); background: var(--ck-surface); border-radius: 0 6px 6px 0; }
+  .m-think-h { display: flex; align-items: center; gap: 7px; padding: 6px 12px; cursor: pointer; font-size: 11.5px; color: var(--ck-text-dim); }
+  .m-think-h svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .m-think-h svg.m-caret { transition: transform .15s; }
+  .m-think.open .m-caret { transform: rotate(90deg); }
+  .m-think-b { display: none; padding: 2px 12px 10px; font-size: 12.5px; line-height: 1.7; color: var(--ck-text-dim); white-space: pre-wrap; word-break: break-word; }
+  .m-think.open .m-think-b { display: block; }
+  .m-tool { margin-bottom: 12px; border: 1px solid var(--ck-border); border-radius: 8px; background: var(--ck-bg-sub); overflow: hidden; }
+  .m-tool-h { display: flex; align-items: center; gap: 9px; padding: 9px 12px; cursor: pointer; }
+  .m-tool-h svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.9; flex-shrink: 0; }
+  .m-tool-name { font-size: 12px; font-weight: 600; color: var(--ck-text-2); font-family: var(--mono, monospace); flex-shrink: 0; }
+  .m-tool-arg { flex: 1; font-size: 12px; color: var(--ck-text-dim); font-family: var(--mono, monospace); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .m-tool-badge { font-size: 10px; padding: 1.5px 6px; border-radius: 4px; font-weight: 600; }
+  .m-tool.run .m-tool-h svg { color: var(--ck-primary); }
+  .m-tool.run .m-tool-badge { color: var(--ck-primary); background: var(--ck-primary-soft); }
+  .m-tool.ok .m-tool-badge { color: var(--ck-green); background: var(--ck-primary-soft); }
+  .m-tool.err .m-tool-badge { color: var(--ck-danger); background: var(--ck-primary-soft); }
+  .m-tool-b { display: none; border-top: 1px solid var(--ck-border); padding: 10px 12px; }
+  .m-tool.open .m-tool-b { display: block; }
+  .m-tool-pre { background: var(--ck-surface); border-radius: 8px; padding: 10px; margin: 0; overflow: auto; max-height: 300px; font-family: var(--mono, monospace); font-size: 11.5px; line-height: 1.6; color: var(--ck-text-2); white-space: pre-wrap; word-break: break-word; }
+
+  /* 输入区 */
+  .m-composer { flex-shrink: 0; padding: 10px 14px calc(12px + env(safe-area-inset-bottom)); background: var(--ck-bg); border-top: 1px solid var(--ck-border); }
+  .m-input-wrap { max-width: 720px; margin: 0 auto; display: flex; align-items: flex-end; gap: 8px; background: var(--ck-bg-sub); border: 1px solid var(--ck-border); border-radius: 12px; padding: 8px 8px 8px 14px; transition: border-color .15s, box-shadow .15s; }
+  .m-input-wrap:focus-within { border-color: var(--ck-primary); box-shadow: 0 0 0 3px var(--ck-primary-soft); }
+  #m-input { flex: 1; border: none; outline: none; background: transparent; resize: none; color: var(--ck-text); font-family: inherit; font-size: 15px; line-height: 1.6; max-height: 140px; padding: 4px 0; }
+  #m-input::placeholder { color: var(--ck-text-dim); }
+  #m-send { flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--ck-primary); color: #fff; display: flex; align-items: center; justify-content: center; }
+  #m-send:disabled { background: var(--ck-surface); color: var(--ck-text-dim); }
+  #m-send.stop { background: var(--ck-surface); color: var(--ck-danger); }
+  #m-send svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* 侧栏抽屉 */
+  .m-scrim { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 90; opacity: 0; pointer-events: none; transition: opacity .22s; }
+  .m-scrim.open { opacity: 1; pointer-events: auto; }
+  .m-drawer { position: fixed; top: 0; left: 0; bottom: 0; z-index: 91; width: 84%; max-width: 340px; background: var(--ck-bg); border-right: 1px solid var(--ck-border); transform: translateX(-100%); transition: transform .25s cubic-bezier(.32,.72,0,1); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  .m-drawer.open { transform: translateX(0); }
+  .m-drawer .ck-sidebar { flex: 1; min-height: 0; }
+  .m-drawer .ck-panel-body { flex: 1; overflow-y: auto; }
   /* 顶部返回/标题条（手机端自绘，因为隐藏了 toolbar） */
   .m-topbar {
     display: flex; align-items: center; gap: 8px;
@@ -1217,11 +1277,21 @@
 <body>
 <div class="shell">
   <div class="m-topbar">
-    <button class="m-btn" id="m-back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+    <button class="m-btn" id="m-menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <div class="m-title">Cuckoo</div>
+    <button class="m-btn" id="m-new"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     <span class="m-status-dot off" id="m-status"></span>
   </div>
-  <div class="main-area">
+  <div class="m-stream" id="m-stream"><div class="m-empty" id="m-empty">
+    <div class="m-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6z"/><path d="m9 12 2 2 4-4"/></svg></div>
+    <div class="m-empty-t1">Cuckoo</div><div class="m-empty-t2">在下面输入，遥控电脑上的 AI</div>
+  </div></div>
+  <div class="m-composer"><div class="m-input-wrap">
+    <textarea id="m-input" rows="1" placeholder="给 Cuckoo 发消息…"></textarea>
+    <button id="m-send" disabled><svg viewBox="0 0 24 24"><path d="m5 12 7-7 7 7M12 5v14"/></svg></button>
+  </div></div>
+  <div class="m-scrim" id="m-scrim"></div>
+  <div class="m-drawer" id="m-drawer">
     <div class="ck-sidebar" id="ck-sidebar">
         <div class="ck-activitybar">
           <button class="ck-ab-item ck-ab-active" data-tab="workspaces" title="工作区（会话）">
@@ -1596,7 +1666,6 @@
         </div>
       </div>
     </div>
-    <div class="viewport"></div>
   </div>
     <div class="statusbar">
       <div class="sb-recent" id="sb-recent"></div>
@@ -1641,8 +1710,7 @@
     setStatus('off');
     ws = new WebSocket(proto + location.host + '/ws');
     ws.onopen = function () {
-      ready = true; setStatus('on');
-      // 连接后刷新当前页
+      ready = true; setStatus('on'); updateSend();
       var cur = currentTab(); if (cur && loaders[cur]) loaders[cur]();
     };
     ws.onclose = function (e) {
@@ -1657,6 +1725,8 @@
       if (msg.type === 'shell-resp' && msg.id && pending[msg.id]) {
         var cb = pending[msg.id]; delete pending[msg.id];
         cb(msg.result);
+      } else {
+        onEvent(msg);   // AI 事件 → 对话流
       }
     };
   }
@@ -1872,18 +1942,134 @@
     });
   };
 
-  // ================= 顶部返回 / 状态 =================
-  document.getElementById('m-back').onclick = function () {
-    // 返回到默认页（工作区）
-    activate('workspaces');
-    if (loaders.workspaces) loaders.workspaces();
+  // ================= 对话流 =================
+  var $stream = document.getElementById('m-stream');
+  var $empty = document.getElementById('m-empty');
+  var $input = document.getElementById('m-input');
+  var $send = document.getElementById('m-send');
+  var wrap = document.createElement('div');
+  wrap.className = 'm-wrap';
+  var curAi = null, curThink = null, curTurn = null, toolMap = {}, busy = false, lastAi = '';
+
+  function atBottom() { return $stream.scrollHeight - $stream.scrollTop - $stream.clientHeight < 80; }
+  function toBottom() { $stream.scrollTop = $stream.scrollHeight; }
+  function rmEmpty() { if ($empty && $empty.parentNode) { $empty.parentNode.removeChild($empty); $empty = null; } }
+  function add(el) {
+    rmEmpty();
+    if (!wrap.parentNode) $stream.appendChild(wrap);
+    wrap.appendChild(el);
+    if (atBottom()) toBottom();
+  }
+  function firstLine(s) { return String(s || '').split(String.fromCharCode(10))[0].slice(0, 60); }
+  function sysMsg(cls, text) {
+    var d = document.createElement('div'); d.className = 'm-sys' + (cls ? ' ' + cls : '');
+    d.innerHTML = '<span></span>'; d.querySelector('span').textContent = text; add(d);
+  }
+  function userMsg(text) {
+    var d = document.createElement('div'); d.className = 'm-msg user';
+    var b = document.createElement('div'); b.className = 'm-bubble'; b.textContent = text;
+    d.appendChild(b); add(d);
+  }
+  function getTurn() { if (!curTurn) curTurn = document.createElement('div'); return curTurn; }
+  function ensureAi() {
+    var t = getTurn();
+    if (!t.__mounted) { t.className = 'm-msg ai'; add(t); t.__mounted = true; }
+    if (!t.querySelector('.m-body')) {
+      var p = document.createElement('div'); p.className = 'm-prefix';
+      p.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6z"/><path d="m9 12 2 2 4-4"/></svg><span>Cuckoo</span>';
+      var b = document.createElement('div'); b.className = 'm-body';
+      t.appendChild(p); t.appendChild(b); curAi = b;
+    }
+    return curAi;
+  }
+  function thinkEl() {
+    var t = getTurn();
+    if (!t.__mounted) { t.className = 'm-msg ai'; add(t); t.__mounted = true; }
+    var w = document.createElement('div'); w.className = 'm-think open';
+    var h = document.createElement('div'); h.className = 'm-think-h';
+    h.innerHTML = '<svg class="m-caret" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg><span>思考中…</span>';
+    var b = document.createElement('div'); b.className = 'm-think-b';
+    h.onclick = function () { w.classList.toggle('open'); };
+    w.appendChild(h); w.appendChild(b);
+    var body = t.querySelector('.m-body');
+    if (body) t.insertBefore(w, body); else t.appendChild(w);
+    return { wrap: w, body: b };
+  }
+  function toolEl(code) {
+    var t = getTurn();
+    if (!t.__mounted) { t.className = 'm-msg ai'; add(t); t.__mounted = true; }
+    var w = document.createElement('div'); w.className = 'm-tool run';
+    var h = document.createElement('div'); h.className = 'm-tool-h';
+    h.innerHTML = '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L4 17v3h3l5.1-5.1a4 4 0 0 0 5.6-5.6l-2.5 2.5-2.1-2.1z"/></svg><span class="m-tool-name">工具</span><span class="m-tool-arg"></span><span class="m-tool-badge">运行中</span>';
+    h.querySelector('.m-tool-arg').textContent = firstLine(code);
+    var b = document.createElement('div'); b.className = 'm-tool-b';
+    var pre = document.createElement('pre'); pre.className = 'm-tool-pre'; pre.textContent = code || '';
+    b.appendChild(pre);
+    h.onclick = function () { w.classList.toggle('open'); };
+    w.appendChild(h); w.appendChild(b);
+    var body = t.querySelector('.m-body');
+    if (body) t.insertBefore(w, body); else t.appendChild(w);
+    return { wrap: w, badge: h.querySelector('.m-tool-badge'), pre: pre };
+  }
+
+  function onEvent(m) {
+    var t = m.type;
+    if (t === 'stream') {
+      var tk = String(m.think || '').trim();
+      if (tk) { if (!curThink) curThink = thinkEl(); curThink.body.textContent = tk; }
+      else if (curThink) { curThink.wrap.classList.remove('open'); }
+      var b = ensureAi(); b.textContent = m.text || '';
+      if (atBottom()) toBottom();
+    } else if (t === 'assistant-done') {
+      var dt = String(m.text || '').trim();
+      if (dt) { var b2 = ensureAi(); b2.textContent = dt; lastAi = dt; }
+      curAi = null; curThink = null;
+    } else if (t === 'tool-start') {
+      if (curThink) curThink.wrap.classList.remove('open');
+      var el = toolEl(m.code || ''); if (m.code) toolMap[m.code] = el; curAi = null;
+    } else if (t === 'tool-end') {
+      var e2 = toolMap[m.code];
+      if (e2) {
+        if (m.success) { e2.wrap.className = 'm-tool ok'; e2.badge.textContent = '完成'; }
+        else { e2.wrap.className = 'm-tool err'; e2.badge.textContent = '失败'; if (m.error) e2.pre.textContent = String(m.code || '') + String.fromCharCode(10,10) + '错误：' + m.error; }
+        delete toolMap[m.code];
+      }
+      curAi = null; curThink = null;
+    } else if (t === 'task-idle') { curAi = null; curThink = null; curTurn = null; setBusy(false); }
+    else if (t === 'ai-state') { setBusy(!!m.generating); }
+  }
+
+  function setBusy(on) {
+    busy = on;
+    if (on) { setStatus('busy'); $send.className = 'stop'; $send.disabled = false; $send.innerHTML = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>'; }
+    else { setStatus('on'); $send.className = ''; $send.innerHTML = '<svg viewBox="0 0 24 24"><path d="m5 12 7-7 7 7M12 5v14"/></svg>'; updateSend(); }
+  }
+  function updateSend() { if (busy) return; $send.disabled = !(ws && ws.readyState === 1) || !$input.value.trim(); }
+  function grow() { $input.style.height = 'auto'; $input.style.height = Math.min($input.scrollHeight, 140) + 'px'; updateSend(); }
+  function submit() {
+    if (busy) { send({ type: 'stop' }); return; }
+    var v = $input.value.trim(); if (!v) return;
+    if (!send({ type: 'send', text: v })) { sysMsg('err', '未连接'); return; }
+    curTurn = null; curAi = null; curThink = null; lastAi = '';
+    userMsg(v); toBottom(); $input.value = ''; grow();
+  }
+  $send.onclick = submit;
+  $input.addEventListener('input', grow);
+  $input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } });
+
+  // ================= 抽屉 =================
+  var $drawer = document.getElementById('m-drawer');
+  var $scrim = document.getElementById('m-scrim');
+  document.getElementById('m-menu').onclick = function () {
+    $drawer.classList.add('open'); $scrim.classList.add('open');
+    var cur = currentTab(); if (cur && loaders[cur]) loaders[cur]();
   };
+  $scrim.onclick = function () { $drawer.classList.remove('open'); $scrim.classList.remove('open'); };
+  document.getElementById('m-new').onclick = function () { send({ type: 'new' }); };
 
   // ================= 启动 =================
   connect();
-  activate('workspaces');
-  // 等连接就绪后加载
-  var t = setInterval(function () { if (ready) { clearInterval(t); loaders.workspaces(); } }, 300);
+  var t = setInterval(function () { if (ready) { clearInterval(t); updateSend(); } }, 300);
 })();
 
 </script>
