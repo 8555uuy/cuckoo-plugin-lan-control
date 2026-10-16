@@ -1693,6 +1693,12 @@
  * 构建时注入：API_MAP 方法→通道映射；API_NOOP 订阅方法（no-op）。
  */
 (function () {
+  // 全局错误显示（手机端无控制台，把错误显示出来）
+  window.addEventListener('error', function (e) {
+    var b = document.getElementById('m-err');
+    if (!b) { b = document.createElement('div'); b.id = 'm-err'; b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b91c1c;color:#fff;font-size:12px;padding:8px 12px;max-height:40%;overflow:auto;white-space:pre-wrap;'; document.body.appendChild(b); }
+    b.textContent = '⚠ ' + (e.message || e.error || 'error') + ' @ ' + (e.filename || '') + ':' + (e.lineno || '');
+  });
   var API_MAP = {"navigate":"shell-navigate","back":"shell-back","forward":"shell-forward","reload":"shell-reload","home":"shell-home","getSystemTotal":"get-system-total","getProjectDir":"get-project-dir","initProject":"init-project","toggleSidebar":"shell-toggle-sidebar","listWebSessions":"web-list-sessions","navigateWebSession":"web-navigate-session","newWebConversation":"web-new-conversation","toggleHarness":"shell-toggle-harness","listPluginShellMounts":"plugin-shell-list","listPluginShellStyles":"plugin-shell-style-list","getShellBackground":"plugin-shell-background-list","commandInvoke":"plugin-command-invoke","commandList":"plugin-command-list","listPluginSlots":"plugin-slot-list","pluginConfigGet":"plugin-config-get","pluginConfigSet":"plugin-config-set","pluginHostCall":"plugin-host-call","wgList":"wg-list","wgCreate":"wg-create","wgAddWindow":"wg-add-window","wgRemoveWindow":"wg-remove-window","wgRename":"wg-rename","wgDelete":"wg-delete","wgSwitch":"wg-switch","listProfiles":"list-profiles","listProviders":"list-providers","createProfileWindow":"create-profile-window","openProfileWindow":"open-profile-window","deleteProfileWindow":"delete-profile","setProfileAutoOpen":"set-profile-auto-open","listAllSessions":"list-all-sessions","navigateSession":"navigate-session","setSessionArchived":"set-session-archived","getDirInfo":"get-dir-info","listProjectTree":"list-project-tree","readProjectFile":"read-project-file","openFileExternal":"open-project-file-external","setProjectArchived":"set-project-archived","setSessionTitle":"set-session-title","newConversationForProject":"new-conversation-for-project","listSnippets":"list-snippets","saveSnippets":"save-snippets","triggerSnippet":"trigger-snippet","listRunningSubagents":"subagent-list","windowMinimize":"shell-window-minimize","windowMaximize":"shell-window-maximize","windowClose":"shell-window-close","windowIsMaximized":"shell-window-is-maximized","themeGet":"theme-get","themeSet":"theme-set","themeList":"theme-list","themeSubscribe":"theme-subscribe","listSkills":"list-skills","listAgents":"list-agents","createAgentFile":"create-agent-file","openAgentFile":"open-agent-file","renameAgent":"rename-agent","deleteAgentFile":"delete-agent-file","listMcpServers":"list-mcp-servers","enableMcpServer":"enable-mcp-server","disableMcpServer":"disable-mcp-server","appendSnippet":"append-to-input","pluginMarketList":"plugin-market-list","pluginMarketRemote":"plugin-market-remote","pluginInstall":"plugin-install","pluginUninstall":"plugin-uninstall","listInstalledPlugins":"plugin-list-installed","pluginSetEnabled":"plugin-set-enabled","pluginOpenDir":"plugin-open-dir","cuckooPluginList":"cuckoo-plugin-list","cuckooPluginInstall":"cuckoo-plugin-install","cuckooPluginUninstall":"cuckoo-plugin-uninstall","cuckooPluginToggle":"cuckoo-plugin-toggle","cuckooPluginOpenDir":"cuckoo-plugin-open-dir","getAppInfo":"get-app-info","checkUpdate":"check-update","getAssetUrl":"get-asset-url","openExternal":"open-external","openFeishuSetup":"open-feishu-setup","getFeishuConfig":"feishu-get-config","saveFeishuConfig":"feishu-save-config","reconnectFeishu":"feishu-reconnect","disconnectFeishu":"feishu-disconnect","listFeishuChats":"feishu-list-chats","getFeishuBinding":"feishu-get-binding","bindFeishuChat":"feishu-bind-chat","getAutoCompact":"get-autocompact","saveAutoCompact":"save-autocompact","triggerCompact":"trigger-compact","listMemories":"list-memories","getMemoriesEnabled":"get-memories-enabled","setMemoriesEnabled":"set-memories-enabled","saveMemories":"save-memories","addMemory":"add-memory","deleteMemory":"delete-memory","listSnapshots":"list-snapshots","createSnapshot":"create-snapshot","restoreSnapshot":"restore-snapshot","deleteSnapshot":"delete-snapshot","getSettings":"get-settings","saveSettings":"save-settings","resetSettings":"reset-settings"};
   var API_NOOP = ["onUrlUpdated","onTokenUpdated","onTpsUpdated","onTotalUpdated","onProjectDir","onSidebarDrag","onWebUrlChanged","onHarnessBusy","onHarnessMode","onPluginShellMount","onPluginShellStyle","onPluginShellStyleRemove","onShellBackground","onPluginSlotRegister","onPluginSlotUnregister","onSnippetsChanged","onPlatformMode","onSessionsChanged","onSubagentsChanged","onThemeChanged","onMemoriesChanged"];
   var NOOP_SET = {};
@@ -1780,7 +1786,8 @@
     var t = document.querySelector('.m-topbar .m-title');
     if (t) t.textContent = TAB_TITLES[tab] || 'Cuckoo';
   }
-  document.querySelector('.ck-activitybar').addEventListener('click', function (e) {
+  var abar = document.querySelector('.ck-activitybar');
+  if (abar) abar.addEventListener('click', function (e) {
     var it = e.target.closest && e.target.closest('.ck-ab-item');
     if (!it || !it.dataset.tab) return;
     var tab = it.dataset.tab;
@@ -2053,19 +2060,23 @@
     curTurn = null; curAi = null; curThink = null; lastAi = '';
     userMsg(v); toBottom(); $input.value = ''; grow();
   }
-  $send.onclick = submit;
-  $input.addEventListener('input', grow);
-  $input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } });
+  if ($send) $send.onclick = submit;
+  if ($input) {
+    $input.addEventListener('input', grow);
+    $input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } });
+  }
 
   // ================= 抽屉 =================
   var $drawer = document.getElementById('m-drawer');
   var $scrim = document.getElementById('m-scrim');
-  document.getElementById('m-menu').onclick = function () {
+  var $menu = document.getElementById('m-menu');
+  if ($menu) $menu.onclick = function () {
     $drawer.classList.add('open'); $scrim.classList.add('open');
     var cur = currentTab(); if (cur && loaders[cur]) loaders[cur]();
   };
-  $scrim.onclick = function () { $drawer.classList.remove('open'); $scrim.classList.remove('open'); };
-  document.getElementById('m-new').onclick = function () { send({ type: 'new' }); };
+  if ($scrim) $scrim.onclick = function () { $drawer.classList.remove('open'); $scrim.classList.remove('open'); };
+  var $newBtn = document.getElementById('m-new');
+  if ($newBtn) $newBtn.onclick = function () { send({ type: 'new' }); };
 
   // ================= 启动 =================
   connect();
