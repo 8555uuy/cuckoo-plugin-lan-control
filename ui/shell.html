@@ -5,7 +5,23 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Cuckoo</title>
+<script>
+window.__lcBoot=1;
+window.addEventListener("error",function(e){
+  var b=document.getElementById("m-boot")||(function(){var x=document.createElement("div");x.id="m-boot";document.documentElement.appendChild(x);return x;})();
+  b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:999999;background:#b91c1c;color:#fff;font:12px/1.5 monospace;padding:10px;white-space:pre-wrap;max-height:60%;overflow:auto";
+  b.textContent="JS错误: "+(e.message||e.error)+"
+"+(e.filename||"")+":"+(e.lineno||"");
+});
+window.addEventListener("unhandledrejection",function(e){
+  var b=document.getElementById("m-boot")||(function(){var x=document.createElement("div");x.id="m-boot";document.documentElement.appendChild(x);return x;})();
+  b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:999999;background:#b45309;color:#fff;font:12px/1.5 monospace;padding:10px;white-space:pre-wrap;max-height:60%;overflow:auto";
+  b.textContent="Promise错误: "+((e.reason&&(e.reason.message||e.reason))||e);
+});
+</script>
 <style>
+:root{--ck-bg:#16181d;--ck-bg-sub:#191c22;--ck-surface:rgba(255,255,255,.05);--ck-surface-hover:rgba(255,255,255,.09);--ck-border:rgba(255,255,255,.1);--ck-border-strong:rgba(255,255,255,.16);--ck-primary:#6b83ff;--ck-primary-strong:#8b9dff;--ck-primary-soft:rgba(107,131,255,.16);--ck-text:#e6e8eb;--ck-text-2:#a8adba;--ck-text-dim:#757b8a;--ck-danger:#ff6369;--ck-green:#46b47e;--ck-shadow-sm:none;--ck-shadow:none;}
+html,body{background:#16181d!important;color:#e6e8eb!important;}
 /* ===== 全局滚动条（统一规范：4px 细条、透明轨道、圆角滑块）=====
  * 不要逐个元素写滚动条样式——统一在这里定义，避免各处不一致。
  */
@@ -1275,6 +1291,7 @@
 </style>
 </head>
 <body>
+<div id="m-boot" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99998;color:#6b83ff;font:14px/1.6 -apple-system,sans-serif;text-align:center">正在加载界面…<br><span style="font-size:11px;opacity:.7">若长时间停留，说明脚本报错</span></div>
 <div class="shell">
   <div class="m-topbar">
     <button class="m-btn" id="m-menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
@@ -2272,6 +2289,8 @@
   if ($newBtn) $newBtn.onclick = function () { send({ type: 'new' }); };
 
   // ================= 启动 =================
+  // 移除开机标记（脚本正常执行到这里）
+  try { var boot = document.getElementById('m-boot'); if (boot) boot.remove(); } catch (_) {}
   // 隐藏没有对应页面的活动栏按钮（避免点到后空白）
   document.querySelectorAll('.ck-ab-item').forEach(function (it) {
     var tab = it.dataset.tab;
