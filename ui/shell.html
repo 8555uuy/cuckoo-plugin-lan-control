@@ -1663,6 +1663,195 @@
               </div>
             </div>
 
+            <!-- ===== 项目文件 ===== -->
+            <div class="ck-tab" data-panel="files">
+              <div class="ck-actions">
+                <span class="ck-set-group-title" style="flex:1;" id="ft-root">项目文件</span>
+                <button class="ck-icon-btn" id="ft-refresh" title="刷新">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+              <div class="ck-ft-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                <input class="ck-ft-search-input" id="ft-search" placeholder="搜索文件名…" spellcheck="false" autocomplete="off" />
+              </div>
+              <div class="ck-files-cols">
+                <div class="ck-list ck-ft" id="ft-list">
+                  <div class="ck-list-empty">加载中…</div>
+                </div>
+                <div class="ck-preview-pane" id="ck-preview-pane">
+                  <div class="ck-preview-head">
+                    <span class="ck-preview-name" id="ck-preview-name">文件预览</span>
+                    <span class="ck-preview-size" id="ck-preview-size"></span>
+                    <span class="ck-preview-acts">
+                      <span class="ck-preview-btn" id="ck-preview-ext" title="用系统程序打开">↗</span>
+                      <span class="ck-preview-btn" id="ck-preview-close" title="关闭预览">✕</span>
+                    </span>
+                  </div>
+                  <div class="ck-preview-body" id="ck-preview-body">
+                    <div class="ck-preview-empty" id="ck-preview-empty">点击左侧文件查看内容</div>
+                    <div class="ck-monaco" id="ck-monaco" style="display:none;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== 子代理 ===== -->
+            <div class="ck-tab" data-panel="agents">
+              <div class="ck-actions">
+                <button class="ck-btn ck-btn-anim" id="agent-new">
+                  <svg class="ck-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>新建子代理</span>
+                </button>
+                <button class="ck-icon-btn" id="agent-refresh" title="刷新">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+              <div class="ck-field ck-agent-search">
+                <input class="ck-input" id="agent-search" placeholder="搜索子代理名称 / 描述…" />
+              </div>
+              <div class="ck-agent-filter" id="agent-filter">
+                <button class="ck-chip ck-chip-active" data-scope="all">全部</button>
+                <button class="ck-chip" data-scope="project">项目级</button>
+                <button class="ck-chip" data-scope="user">用户级</button>
+              </div>
+              <div class="ck-list" id="agent-running-list"></div>
+              <div class="ck-list" id="agent-list">
+                <div class="ck-list-empty">加载中…</div>
+              </div>
+              <div class="ck-modal-mask cuckoo-hidden" id="agent-detail-mask">
+                <div class="ck-modal">
+                  <span class="ck-modal-title" id="agent-detail-title">子代理详情</span>
+                  <div class="ck-agent-detail-body" id="agent-detail-body"></div>
+                  <div class="ck-modal-foot">
+                    <button class="ck-btn ck-btn-secondary" id="agent-detail-open">打开正文</button>
+                    <button class="ck-btn ck-btn-secondary" id="agent-detail-copy">复制路径</button>
+                    <button class="ck-btn ck-btn-primary" id="agent-detail-close">关闭</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== MCP ===== -->
+            <div class="ck-tab" data-panel="mcp">
+              <div class="ck-actions">
+                <span class="ck-set-group-title" style="flex:1;">MCP（连接器）</span>
+                <button class="ck-icon-btn" id="mcp-refresh" title="刷新">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+              <div class="ck-list" id="mcp-list">
+                <div class="ck-list-empty">加载中…</div>
+              </div>
+            </div>
+
+            <!-- ===== 窗口 ===== -->
+            <div class="ck-tab" data-panel="windows">
+              <div class="ck-actions">
+                <button class="ck-btn ck-btn-anim" id="win-new">
+                  <svg class="ck-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>新建窗口</span>
+                </button>
+                <button class="ck-icon-btn" id="win-refresh" title="刷新列表">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+              <div class="ck-actions">
+                <button class="ck-btn ck-btn-anim" id="wg-new">
+                  <svg class="ck-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                  <span>新建窗口组</span>
+                </button>
+              </div>
+              <div class="ck-list" id="win-list">
+                <div class="ck-list-empty">暂无窗口</div>
+              </div>
+            </div>
+
+            <!-- ===== Token ===== -->
+            <div class="ck-tab" data-panel="token">
+              <div class="ck-token-hero">
+                <span class="ck-token-hero-label">当前上下文</span>
+                <div class="ck-token-hero-value">
+                  <span id="tk-context">0</span>
+                  <span class="ck-token-hero-unit">tokens</span>
+                </div>
+              </div>
+              <button class="ck-btn ck-btn-anim" id="tk-compact">
+                <svg class="ck-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4M8 7H4M8 7l-4-4"/><path d="M16 21v-4M16 17h4M16 17l4 4"/><path d="M4 14h16"/></svg>
+                <span>压缩上下文</span>
+              </button>
+
+              <div class="ck-stat-list">
+                <div class="ck-stat-item">
+                  <span class="ck-stat-key">对话累计</span>
+                  <span class="ck-stat-val" id="tk-cumulative">0</span>
+                </div>
+                <div class="ck-stat-item">
+                  <span class="ck-stat-key">今日窗口</span>
+                  <span class="ck-stat-val" id="tk-today">0</span>
+                </div>
+                <div class="ck-stat-item">
+                  <span class="ck-stat-key">窗口累计</span>
+                  <span class="ck-stat-val" id="tk-window">0</span>
+                </div>
+                <div class="ck-stat-item">
+                  <span class="ck-stat-key">系统总累计</span>
+                  <span class="ck-stat-val" id="tk-system">0</span>
+                </div>
+              </div>
+
+              <div class="ck-auto-block">
+                <div class="ck-auto-head">
+                  <span class="ck-stat-key">自动压缩</span>
+                  <label class="ck-switch">
+                    <input type="checkbox" id="tk-auto-enabled" />
+                    <span class="ck-switch-track"></span>
+                  </label>
+                </div>
+                <div class="ck-auto-body">
+                  <span>超过</span>
+                  <input type="number" id="tk-auto-threshold" value="80" min="1" />
+                  <span>万 tokens 时触发</span>
+                </div>
+                <button class="ck-btn ck-btn-anim" id="tk-auto-save">
+                  <svg class="ck-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+                  <span>保存设置</span>
+                </button>
+              </div>
+
+              <div class="ck-chart-block">
+                <div class="ck-chart" id="tk-chart"></div>
+              </div>
+            </div>
+
+            <!-- ===== 关于 ===== -->
+            <div class="ck-tab" data-panel="about">
+              <div class="ck-about-head">
+                <div class="ck-about-logo">C</div>
+                <div class="ck-about-title">Cuckoo Code</div>
+                <div class="ck-about-ver">版本 <span id="about-version">—</span></div>
+              </div>
+
+              <div class="ck-actions">
+                <button class="ck-btn ck-btn-anim" id="about-check-update">
+                  <svg class="ck-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                  <span>检查更新</span>
+                </button>
+              </div>
+              <p class="ck-about-tip">更新需能连接 GitHub；如无法连接，请加下方 QQ 群自行下载。</p>
+
+              <div class="ck-about-group">
+                <div class="ck-about-group-title">开源地址</div>
+                <p class="ck-about-tip">本系统为开源项目，欢迎点 Star 支持。</p>
+                <a class="ck-about-link" id="about-github">github.com/wangyongpeng90/cuckoo-code</a>
+              </div>
+
+              <div class="ck-about-group">
+                <div class="ck-about-group-title">QQ 群：1104042537</div>
+                <img class="ck-about-qr" id="about-qq" alt="QQ 群" />
+              </div>
+            </div>
+
         </div>
       </div>
     </div>
@@ -1803,12 +1992,14 @@
     else { placeholder(tab); }
   });
   function placeholder(tab) {
-    // 不支持的页：面板 body 里显示提示
     var body = document.querySelector('.ck-panel-body');
     if (!body) return;
     body.innerHTML = '<div class="ck-tab ck-tab-active" data-panel="' + tab + '"><div class="ck-list-empty" style="padding-top:60px">' +
       (TAB_TITLES[tab] || tab) + '：手机端暂不支持</div></div>';
   }
+
+  // 各页注册后，把 P2 页也接到 loader（避免点了没反应）
+  // （loader 定义见下方 loaders.xxx；此处仅确保 registerTab 存在）
 
   // ================= 通用 =================
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
@@ -1932,6 +2123,123 @@
         el.onchange = function () { shellAPI.pluginSetEnabled(el.dataset.toggle, el.checked); };
       });
     });
+  };
+
+  // ================= 项目文件 =================
+  loaders.files = function () {
+    setList('ft-list', '<div class="ck-list-empty">加载中…</div>');
+    shellAPI.listProjectTree().then(function (r) {
+      var tree = (r && (r.tree || r.files || r.list)) || [];
+      if (!tree.length) { empty('ft-list', r && r.error ? r.error : '项目目录未初始化'); return; }
+      var html = tree.slice(0, 200).map(function (f) {
+        var name = typeof f === 'string' ? f : (f.path || f.name || '');
+        return '<div class="ck-list-item" data-rel="' + esc(name) + '" style="font-family:var(--mono,monospace);font-size:11.5px">' + esc(name) + '</div>';
+      }).join('');
+      setList('ft-list', html);
+      document.querySelectorAll('#ft-list .ck-list-item').forEach(function (el) {
+        el.onclick = function () {
+          var preview = document.getElementById('ck-preview-pane');
+          var body = document.getElementById('ck-preview-body');
+          if (!body) return;
+          body.innerHTML = '<div class="ck-list-empty">读取中…</div>';
+          shellAPI.readProjectFile(el.dataset.rel).then(function (pr) {
+            var content = (pr && (pr.content || pr.data)) || (pr && pr.error ? pr.error : '（空）');
+            body.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;font-family:var(--mono,monospace);font-size:11px;line-height:1.6;padding:8px">' + esc(content) + '</pre>';
+          });
+        };
+      });
+    });
+    var rb = document.getElementById('ft-refresh'); if (rb) rb.onclick = loaders.files;
+  };
+
+  // ================= 子代理 =================
+  loaders.agents = function () {
+    setList('agent-list', '<div class="ck-list-empty">加载中…</div>');
+    shellAPI.listAgents().then(function (r) {
+      var list = (r && (r.agents || r.list)) || (Array.isArray(r) ? r : []);
+      if (!list.length) { empty('agent-list', '还没有子代理'); return; }
+      var html = list.map(function (a) {
+        return '<div class="ck-list-item"><div style="font-size:12.5px;color:var(--ck-text)">' + esc(a.name) + '</div>' +
+          (a.description ? '<div style="font-size:11px;color:var(--ck-text-dim);margin-top:3px">' + esc(a.description) + '</div>' : '') + '</div>';
+      }).join('');
+      setList('agent-list', html);
+    });
+    var rb = document.getElementById('agent-refresh'); if (rb) rb.onclick = loaders.agents;
+  };
+
+  // ================= MCP =================
+  loaders.mcp = function () {
+    setList('mcp-list', '<div class="ck-list-empty">加载中…</div>');
+    shellAPI.listMcpServers().then(function (r) {
+      var list = (r && (r.servers || r.list)) || (Array.isArray(r) ? r : []);
+      if (!list.length) { empty('mcp-list', '还没有 MCP 连接器'); return; }
+      var html = list.map(function (m) {
+        var on = m.enabled !== false;
+        var st = m.connected ? '已连接' : (on ? '未连接' : '已禁用');
+        return '<div class="ck-list-item" style="display:flex;align-items:center;gap:8px">' +
+          '<div style="flex:1;min-width:0"><div style="font-size:12.5px;color:var(--ck-text)">' + esc(m.name) + '</div>' +
+          '<div style="font-size:11px;color:var(--ck-text-dim);margin-top:2px">' + esc(st) + (m.toolCount ? ' · ' + m.toolCount + ' 工具' : '') + '</div></div>' +
+          '<label class="ck-btn-text" style="flex-shrink:0"><input type="checkbox" data-mcp="' + esc(m.name) + '" ' + (on ? 'checked' : '') + '></label></div>';
+      }).join('');
+      setList('mcp-list', html);
+      document.querySelectorAll('#mcp-list [data-mcp]').forEach(function (el) {
+        el.onchange = function () {
+          var n = el.dataset.mcp;
+          if (el.checked) shellAPI.enableMcpServer(n); else shellAPI.disableMcpServer(n);
+        };
+      });
+    });
+    var rb = document.getElementById('mcp-refresh'); if (rb) rb.onclick = loaders.mcp;
+  };
+
+  // ================= 窗口 =================
+  loaders.windows = function () {
+    setList('win-list', '<div class="ck-list-empty">加载中…</div>');
+    shellAPI.listProfiles().then(function (r) {
+      var list = (r && (r.profiles || r.windows || r.list)) || (Array.isArray(r) ? r : []);
+      if (!list.length) { empty('win-list', '暂无窗口'); return; }
+      var html = list.map(function (w) {
+        var pid = w.profileId || w.id || '';
+        return '<div class="ck-list-item" data-pid="' + esc(pid) + '"><div style="font-size:12.5px;color:var(--ck-text)">' +
+          esc(w.providerId || w.name || pid) + '</div><div style="font-size:11px;color:var(--ck-text-dim);margin-top:2px">' + esc(pid) + '</div></div>';
+      }).join('');
+      setList('win-list', html);
+      document.querySelectorAll('#win-list .ck-list-item').forEach(function (el) {
+        el.onclick = function () { if (el.dataset.pid) shellAPI.openProfileWindow(el.dataset.pid); };
+      });
+    });
+    var rb = document.getElementById('win-refresh'); if (rb) rb.onclick = loaders.windows;
+  };
+
+  // ================= Token =================
+  loaders.token = function () {
+    shellAPI.getSystemTotal().then(function (r) {
+      var el = document.getElementById('tk-system');
+      if (el) el.textContent = (r && (r.total || r.value)) || 0;
+    });
+    shellAPI.getAutoCompact().then(function (r) {
+      var s = (r && (r.data || r.settings)) || {};
+      var cb = document.getElementById('tk-auto-enabled'); if (cb) cb.checked = !!s.enabled;
+      var th = document.getElementById('tk-auto-threshold'); if (th && s.threshold) th.value = s.threshold;
+    });
+    var cb = document.getElementById('tk-auto-enabled');
+    var th = document.getElementById('tk-auto-threshold');
+    var sv = document.getElementById('tk-auto-save');
+    if (sv) sv.onclick = function () { shellAPI.saveAutoCompact({ enabled: cb ? cb.checked : false, threshold: th ? Number(th.value) : 80 }); };
+    var cp = document.getElementById('tk-compact');
+    if (cp) cp.onclick = function () { shellAPI.triggerCompact(); };
+  };
+
+  // ================= 关于 =================
+  loaders.about = function () {
+    shellAPI.getAppInfo().then(function (r) {
+      var el = document.getElementById('about-version');
+      if (el) el.textContent = (r && r.version) || '—';
+    });
+    var gh = document.getElementById('about-github');
+    if (gh) gh.onclick = function () { shellAPI.openExternal('https://github.com/wangyongpeng89/cuckoo-code'); };
+    var cu = document.getElementById('about-check-update');
+    if (cu) cu.onclick = function () { shellAPI.checkUpdate().then(function (r) { alert(r && r.version ? ('最新版本：' + r.version) : (r && r.error ? r.error : '已是最新')); }); };
   };
 
   // ================= 设置 =================
