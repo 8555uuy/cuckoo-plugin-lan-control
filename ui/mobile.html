@@ -212,7 +212,12 @@ svg{display:block}
 .cbtn:active{background:var(--surface-hover)}
 .cbtn svg{width:15px;height:15px;stroke:var(--text-2);fill:none;stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round}
 .cbtn.warn svg{stroke:var(--red)}
-.hint{padding:8px 12px;font-size:12px;color:var(--text-dim);line-height:1.6}
+.hint{padding:8px 12px;font-size:12px;color:var(--text-dim);line-height:1.6;word-break:break-all}
+.star-row{padding:14px 12px 6px;margin-top:8px;border-top:1px solid var(--border)}
+.star-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:10px;
+  background:var(--surface);color:var(--text-2);font-size:12.5px;text-decoration:none;transition:all .16s;border:1px solid transparent}
+.star-btn:active{background:var(--surface-hover)}
+.star-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:var(--accent)}
 .skel{height:38px;margin:4px 4px 6px;border-radius:9px;background:linear-gradient(90deg,var(--surface),var(--bg-elev),var(--surface));background-size:200% 100%;animation:sk 1.3s infinite}
 @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
 </style>
@@ -236,13 +241,17 @@ svg{display:block}
     <div class="group-t">控制</div>
     <div class="ctrl-grid">
       <button class="cbtn warn" data-cmd="stop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>停止</button>
-      <button class="cbtn" data-cmd="new"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新对话</button>
+      <button class="cbtn" data-cmd="home"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>首页</button>
       <button class="cbtn" data-cmd="back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>后退</button>
       <button class="cbtn" data-cmd="forward"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>前进</button>
-      <button class="cbtn" data-cmd="reload"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>刷新</button>
-      <button class="cbtn" data-cmd="home"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>首页</button>
     </div>
     <div class="hint" id="device-info"></div>
+    <div class="star-row">
+      <a class="star-btn" id="star-btn" href="https://github.com/8555uuy/cuckoo-plugin-lan-control" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M12 2l3 6.5 7 .9-5 4.8 1.2 7L12 18l-6.2 3.2L7 14.2 2 9.4l7-.9z"/></svg>
+        <span>感谢支持 · 给个 Star</span>
+      </a>
+    </div>
   </div>
 </aside>
 
@@ -252,7 +261,7 @@ svg{display:block}
     <div class="t1" id="title">Cuckoo</div>
     <div class="t2"><span class="dot off" id="dot"></span><span id="stat">连接中…</span></div>
   </div>
-  <button class="tb-btn" id="refresh"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+  <button class="tb-btn" id="top-new"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
 </header>
 
 <main class="stream" id="stream">
@@ -368,7 +377,12 @@ svg{display:block}
     }
     else if(t==='assistant-done'){
       var dt=String(m.text||'').trim();
-      if(dt){ var b2=ensureAi(); b2.textContent=dt; lastAi=dt; }
+      // 有 curAi 就更新；否则仅当与上一条不同才补一条（防重复上报）
+      if(dt){
+        if(curAi){ curAi.textContent=dt; }
+        else if(dt!==lastAi){ ensureAi().textContent=dt; }
+        lastAi=dt;
+      }
       curAi=null; curThink=null;
     }
     else if(t==='tool-start'){
@@ -427,12 +441,13 @@ svg{display:block}
     setConn('off','连接中…');
     ws=new WebSocket(proto+location.host+'/ws');
     ws.onopen=function(){
-      setConn('on','在线'); $send.disabled=false;
+      setConn('on','在线');
       sysMsg('ok','已连接到电脑');
       send({type:'status'});
+      updateSendBtn();
     };
     ws.onclose=function(e){
-      $send.disabled=true; setBusy(false);
+      $send.disabled=true; busy=false; setConn('off','断开');
       if(e&&e.code===4001){ retry=true; setConn('off','未授权'); sysMsg('err','未授权，请刷新重新登录'); return; }
       setConn('off','断开'); curAi=null;
       sysMsg('err','连接断开，2 秒后重连…');
@@ -445,17 +460,17 @@ svg{display:block}
 
   function setBusy(on){
     busy=on;
-    $send.disabled=!ws||ws.readyState!==1;
     if(on){
-      setConn('busy','生成中'); $send.className='stop';
+      setConn('busy','生成中'); $send.className='stop'; $send.disabled=false;
       $send.innerHTML='<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
     } else {
       setConn('on','在线'); $send.className='';
       $send.innerHTML='<svg viewBox="0 0 24 24"><path d="m5 12 7-7 7 7M12 5v14"/></svg>';
+      updateSendBtn();
     }
   }
 
-  function grow(){ $input.style.height='auto'; $input.style.height=Math.min($input.scrollHeight,140)+'px'; }
+  function grow(){ $input.style.height='auto'; $input.style.height=Math.min($input.scrollHeight,140)+'px'; updateSendBtn(); }
   function submit(){
     if(busy){ send({type:'stop'}); return; }
     var v=$input.value.trim(); if(!v)return;
@@ -468,14 +483,25 @@ svg{display:block}
   $input.addEventListener('input',grow);
   $input.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submit();} });
 
-  function openDrawer(){ $drawer.classList.add('open'); $scrim.classList.add('open'); send({type:'web-sessions'}); send({type:'status'}); }
+  function openDrawer(){
+    $drawer.classList.add('open'); $scrim.classList.add('open');
+    var ok1=send({type:'web-sessions'}); var ok2=send({type:'status'});
+    if(!ok1&&!ok2){ document.getElementById('web-list').innerHTML='<div class="hint">未连接，稍后重试</div>'; }
+  }
   function closeDrawer(){ $drawer.classList.remove('open'); $scrim.classList.remove('open'); }
   document.getElementById('menu').onclick=openDrawer;
   document.getElementById('drawer-x').onclick=closeDrawer;
   $scrim.onclick=closeDrawer;
   document.getElementById('new-sess').onclick=function(){ send({type:'new'}); };
   document.querySelectorAll('[data-cmd]').forEach(function(b){ b.onclick=function(){ send({type:b.getAttribute('data-cmd')}); }; });
-  document.getElementById('refresh').onclick=function(){ send({type:'web-sessions'}); toBottom(); };
+  document.getElementById('top-new').onclick=function(){ send({type:'new'}); };
+
+  // 发送按钮：空文本时禁用（除生成中/停止态外）
+  function updateSendBtn(){
+    if(busy) return;
+    var hasText=$input.value.trim().length>0;
+    $send.disabled=!(ws&&ws.readyState===1)||!hasText;
+  }
 
   connect();
 })();
