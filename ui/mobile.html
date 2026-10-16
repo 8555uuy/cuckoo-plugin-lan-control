@@ -37,6 +37,13 @@ header{
 .msg.tool{align-self:flex-start;font-size:12px;color:#94a3b8;background:rgba(15,23,42,.6);border:1px solid rgba(148,163,184,.12);font-family:ui-monospace,Consolas,monospace;max-width:92%;padding:6px 10px;border-radius:8px;white-space:pre-wrap;word-break:break-all}
 .msg.tool.ok{color:#86efac;border-color:rgba(134,239,172,.22)}
 .msg.tool.err{color:#fca5a5;border-color:rgba(252,165,165,.22)}
+.msg.think{align-self:flex-start;background:rgba(15,23,42,.5);border:1px dashed rgba(148,163,184,.2);color:#94a3b8;font-size:12.5px;line-height:1.6;max-width:92%;padding:8px 12px;border-radius:10px;white-space:pre-wrap;word-break:break-word}
+.msg.think .think-head{cursor:pointer;color:#7dd3fc;font-size:11.5px;user-select:none;display:flex;align-items:center;gap:6px;margin-bottom:0}
+.msg.think.expanded .think-head{margin-bottom:6px}
+.msg.think .think-body{display:none}
+.msg.think.expanded .think-body{display:block}
+.msg.think .caret{transition:transform .15s;font-size:9px}
+.msg.think.expanded .caret{transform:rotate(90deg)}
 .input-bar{flex-shrink:0;padding:10px 14px;border-top:1px solid rgba(148,163,184,.12);display:flex;flex-direction:column;gap:8px;background:rgba(11,18,32,.6);backdrop-filter:blur(10px)}
 .row{display:flex;gap:8px}
 input[type=text]{flex:1;min-width:0;padding:11px 14px;font-size:15px;color:#e2e8f0;background:rgba(15,23,42,.8);border:1px solid rgba(148,163,184,.2);border-radius:11px;outline:none}
@@ -82,6 +89,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
   var toolBubbles = new Map();
   var stoppedRetry = false;
   var lastAiText = '';
+  var currentThink = null;   // 当前思考气泡
+  var lastThinkText = '';    // 上一条思考内容（去重）
   var $chat = document.getElementById('chat');
   var $input = document.getElementById('input');
   var $status = document.getElementById('status');
@@ -100,6 +109,22 @@ button:disabled{opacity:.5;cursor:not-allowed}
     var d = document.createElement('div');
     d.className = 'msg ' + cls;
     d.textContent = text || '';
+    $chat.appendChild(d);
+    scrollBottom();
+    return d;
+  }
+  function addThinkBubble() {
+    clearEmpty();
+    var d = document.createElement('div');
+    d.className = 'msg think expanded';
+    var head = document.createElement('div');
+    head.className = 'think-head';
+    head.innerHTML = '<span class="caret">▶</span><span>💭 思考过程</span>';
+    head.onclick = function () { d.classList.toggle('expanded'); };
+    var body = document.createElement('div');
+    body.className = 'think-body';
+    d.appendChild(head);
+    d.appendChild(body);
     $chat.appendChild(d);
     scrollBottom();
     return d;
@@ -143,6 +168,22 @@ button:disabled{opacity:.5;cursor:not-allowed}
   function handle(msg) {
     var t = msg && msg.type;
     if (t === 'stream') {
+      // 思考过程（如有）
+      var think = String(msg.think || '').trim();
+      if (think) {
+        if (!currentThink) {
+          currentThink = addThinkBubble();
+          lastThinkText = '';
+        }
+        var body = currentThink.querySelector('.think-body');
+        if (body) body.textContent = think;
+        lastThinkText = think;
+        scrollBottom();
+      } else if (currentThink) {
+        // 思考结束（本轮不再输出思考）→ 折叠
+        currentThink.classList.remove('expanded');
+      }
+      // 正文
       var text = msg.text || '';
       if (!currentBubble) {
         if (!text) return;
@@ -175,6 +216,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
       }
     } else if (t === 'task-idle') {
       currentBubble = null;
+      currentThink = null;
       setStatus('已连接', 'on');
     } else if (t === 'ai-state') {
       setStatus(msg.generating ? '生成中…' : '已连接', msg.generating ? 'on' : 'on');
@@ -205,6 +247,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
     $input.value = '';
     currentBubble = null;
     lastAiText = '';
+    currentThink = null;
+    lastThinkText = '';
   }
 
   document.getElementById('btn-send').onclick = submit;
