@@ -116,9 +116,34 @@ function randomPassword(len) {
 
 const crypto = require('node:crypto');
 
-/** 登录 cookie 的签名密钥（进程级；重启后旧 cookie 失效） */
-const COOKIE_SECRET = crypto.randomBytes(16).toString('hex');
+/**
+ * 登录 cookie 的签名密钥 —— 持久化到文件，重启后旧 cookie 仍有效。
+ * （原来每次进程重启都随机生成，导致手机每隔一会儿就被踢回登录页。）
+ */
 const COOKIE_NAME = 'lc_auth';
+const COOKIE_SECRET = (function () {
+  try {
+    const f = path.join(path.dirname(configFile()), 'lan-control-secret');
+    if (fs.existsSync(f)) {
+      const s = fs.readFileSync(f, 'utf-8').trim();
+      if (s) return s;
+    }
+    const s = crypto.randomBytes(24).toString('hex');
+    fs.writeFileSync(f, s, { encoding: 'utf-8', mode: 0o600 });
+    return s;
+  } catch (_) {
+    return crypto.randomBytes(16).toString('hex');
+  }
+})();
+
+/** 诊断日志（写文件，便于排查） */
+function dlog(msg) {
+  try {
+    const f = path.join(path.dirname(configFile()), 'lan-control.log');
+    fs.appendFileSync(f, new Date().toISOString() + ' ' + msg + '\n', 'utf-8');
+  } catch (_) { /* ignore */ }
+  console.log('[lan-control] ' + msg);
+}
 
 /** 生成登录 cookie 值：HMAC(密码) */
 function makeCookie(pw) {
@@ -227,12 +252,14 @@ function start() {
             let pw = '';
             try { pw = new URLSearchParams(body).get('password') || ''; } catch (_) {}
             if (pw && pw === cfg.password) {
+              dlog('登录成功 → 下发 cookie');
               res.writeHead(302, {
                 'Set-Cookie': COOKIE_NAME + '=' + makeCookie(cfg.password) + '; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax',
                 'Location': '/',
               });
               res.end();
             } else {
+              dlog('登录失败（密码错误）');
               res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8' });
               res.end(loginPage(true));
             }
@@ -259,6 +286,7 @@ function start() {
 
         // 需要登录的页面
         if (!isAuthed(req, cfg)) {
+          dlog('未登录 → 登录页  path=' + url + '  hasPw=' + !!cfg.password + '  cookie=' + (req.headers.cookie || '无'));
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
           res.end(loginPage(false));
           return;
