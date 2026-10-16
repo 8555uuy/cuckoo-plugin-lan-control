@@ -44,14 +44,15 @@ const re2 = /(\w+):\s*\(\)\s*=>\s*ipcRenderer\.invoke\('([^']+)'/g;
 while ((m = re2.exec(preloadSrc)) !== null) {
   apiMap[m[1]] = m[2];
 }
-// onXXX 订阅（手机端无推送）：标记为 no-op
-const noopRe = /(\w+):\s*\([^)]*\)\s*=>\s*\{?\s*ipcRenderer\.on\(/g;
+// onXXX 订阅（手机端无推送）：标记为 no-op。
+// 宽松匹配：所有以 on + 大写字母开头、返回 ipcRenderer.on/onReceive 的方法名。
 const noops = [];
-while ((m = noopRe.exec(preloadSrc)) !== null) { noops.push(m[1]); }
+const noopRe = /\b(on[A-Z]\w*)\s*:\s*\([^)]*\)\s*=>/g;
+while ((m = noopRe.exec(preloadSrc)) !== null) { if (noops.indexOf(m[1]) === -1) noops.push(m[1]); }
 
 const appJs = fs.readFileSync(path.join(HERE, 'shell-app.js'), 'utf8')
-  .replace('/*__API_MAP__*/', JSON.stringify(apiMap))
-  .replace('/*__API_NOOP__*/', JSON.stringify(noops));
+  .replace('__API_MAP__', JSON.stringify(apiMap))
+  .replace('__API_NOOP__', JSON.stringify(noops));
 
 // 4. 拼装
 const html = [

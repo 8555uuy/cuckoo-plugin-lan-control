@@ -5,11 +5,11 @@
  *    通过 WebSocket 转发到主进程（壳页桥，白名单）。
  * 2. 活动栏 tab 切换 + 各页加载（P1：工作区/对话/记忆/快照/技能/插件/设置）。
  *
- * 构建时注入：/*__API_MAP__*/ 方法→通道映射；/*__API_NOOP__*/ 订阅方法。
+ * 构建时注入：API_MAP 方法→通道映射；API_NOOP 订阅方法（no-op）。
  */
 (function () {
-  var API_MAP = /*__API_MAP__*/ {};
-  var API_NOOP = /*__API_NOOP__*/ [];
+  var API_MAP = __API_MAP__;
+  var API_NOOP = __API_NOOP__;
   var NOOP_SET = {};
   API_NOOP.forEach(function (n) { NOOP_SET[n] = 1; });
 
