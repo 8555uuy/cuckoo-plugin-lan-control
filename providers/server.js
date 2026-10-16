@@ -264,8 +264,8 @@ function start() {
           return;
         }
 
-        // 壳页（手机端 Cuckoo 完整界面）
-        if (url === '/shell') {
+        // 壳页（手机端 Cuckoo 完整界面）—— 根路径直接进
+        if (url === '/' || url === '/shell') {
           try {
             const file = path.join(__dirname, '..', 'ui', 'shell.html');
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -277,8 +277,8 @@ function start() {
           return;
         }
 
-        // 控制页（手机端）—— 根路径直接进控制页，/control 也兼容
-        if (url === '/' || url === '/control') {
+        // 旧控制页（保留，/control 访问）
+        if (url === '/control') {
           try {
             const file = path.join(__dirname, '..', 'ui', 'mobile.html');
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
