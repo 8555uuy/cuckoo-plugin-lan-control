@@ -264,6 +264,19 @@ function start() {
           return;
         }
 
+        // 壳页（手机端 Cuckoo 完整界面）
+        if (url === '/shell') {
+          try {
+            const file = path.join(__dirname, '..', 'ui', 'shell.html');
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(fs.readFileSync(file, 'utf-8'));
+          } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('shell page not found');
+          }
+          return;
+        }
+
         // 控制页（手机端）—— 根路径直接进控制页，/control 也兼容
         if (url === '/' || url === '/control') {
           try {

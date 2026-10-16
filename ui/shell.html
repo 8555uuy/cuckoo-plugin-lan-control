@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Cuckoo</title>
+<style>
+/* ===== 全局滚动条（统一规范：4px 细条、透明轨道、圆角滑块）=====
+ * 不要逐个元素写滚动条样式——统一在这里定义，避免各处不一致。
+ */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--ck-scroll-thumb); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ck-scroll-hover); }
+
+/* ===== 浅色（默认）===== */
+  :root {
+    --ck-bg: #ffffff;
+    --ck-bg-sub: #fbfbfd;
+    --ck-toolbar: #fbfbfd;
+    --ck-surface: #f5f6f8;
+    --ck-surface-hover: #eef0f4;
+    --ck-border: rgba(16, 24, 40, 0.07);
+    --ck-border-strong: rgba(16, 24, 40, 0.12);
+    --ck-primary: #4d6bfe;
+    --ck-primary-strong: #3b5bdb;
+    --ck-primary-soft: rgba(77, 107, 254, 0.08);
+    --ck-text: #16181d;
+    --ck-text-2: #545a67;
+    --ck-text-dim: #8a8f9b;
+    --ck-hover-bg: #e6e8ee;
+    --ck-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+    --ck-shadow: 0 1px 3px rgba(16, 24, 40, 0.05), 0 1px 2px rgba(16, 24, 40, 0.03);
+    --ck-shadow-lg: 0 4px 12px rgba(16, 24, 40, 0.07);
+    --ck-scroll-thumb: rgba(0, 0, 0, 0.14);
+    --ck-scroll-hover: rgba(0, 0, 0, 0.24);
+    --ck-danger: #e5484d;
+    --ck-green: #30a46c;
+  }
+  /* ===== 深色（由主题 presenter 设 body[data-ck-dark]）===== */
+  body[data-ck-dark] {
+    --ck-bg: #16181d;
+    --ck-bg-sub: #191c22;
+    --ck-toolbar: #191c22;
+    --ck-surface: rgba(255, 255, 255, 0.045);
+    --ck-surface-hover: rgba(255, 255, 255, 0.08);
+    --ck-border: rgba(255, 255, 255, 0.08);
+    --ck-border-strong: rgba(255, 255, 255, 0.14);
+    --ck-primary: #6b83ff;
+    --ck-primary-strong: #8b9dff;
+    --ck-primary-soft: rgba(107, 131, 255, 0.16);
+    --ck-text: #e4e6eb;
+    --ck-text-2: #a8adba;
+    --ck-text-dim: #757b8a;
+    --ck-hover-bg: rgba(255, 255, 255, 0.13);
+    --ck-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --ck-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
+    --ck-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --ck-scroll-thumb: rgba(255, 255, 255, 0.14);
+    --ck-scroll-hover: rgba(255, 255, 255, 0.24);
+    --ck-danger: #ff6369;
+    --ck-green: #46b47e;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--ck-bg); color: var(--ck-text); overflow: hidden;
+  }
+  .shell { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ===== 顶部工具栏 ===== */
+  .toolbar {
+    display: flex; align-items: center; gap: 2px;
+    height: 46px; padding: 0 12px;
+    background: var(--ck-bg);
+    border-bottom: 1px solid var(--ck-border);
+    flex-shrink: 0;
+  }
+  /* 纯净模式/原版模式 切换按钮（项目选择器右侧） */
+  .harness-toggle {
+    height: 30px; min-width: 30px; padding: 0 8px; flex-shrink: 0;
+    border: none; border-radius: 8px;
+    background: transparent; color: var(--ck-text-2);
+    font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
+    transition: background .14s, color .14s;
+    white-space: nowrap;
+  }
+  .harness-toggle:hover { background: var(--ck-surface-hover); color: var(--ck-text); }
+  .harness-toggle:active { transform: scale(0.97); }
+
+  /* 项目目录选择器（地址栏最左） */
+  .project-picker {
+    display: flex; align-items: center; gap: 7px;
+    height: 32px; padding: 0 8px 0 5px; flex-shrink: 0;
+    max-width: 190px;
+    border: 1px solid transparent; border-radius: 9px;
+    background: transparent; cursor: pointer;
+    transition: background .14s, border-color .14s;
+    font-family: inherit;
+  }
+  .project-picker:hover { background: var(--ck-surface-hover); }
+  .project-picker:active { transform: scale(0.97); }
+  .pp-icon {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--ck-primary), var(--ck-primary-strong));
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+    line-height: 1;
+  }
+  .pp-name {
+    font-size: 12.5px; font-weight: 600; color: var(--ck-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  .pp-caret { width: 13px; height: 13px; flex-shrink: 0; color: var(--ck-text-dim); }
+  .nav-btn {
+    width: 30px; height: 30px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: 7px; cursor: pointer;
+    background: transparent; color: var(--ck-text-2);
+    transition: background .14s, color .14s;
+  }
+  .nav-btn:hover { background: var(--ck-surface-hover); color: var(--ck-text); }
+  .nav-btn:active { background: var(--ck-surface); }
+  .nav-btn.disabled { opacity: .3; cursor: default; pointer-events: none; }
+  .nav-btn svg { width: 16px; height: 16px; }
+  .url-wrap {
+    flex: 1; display: flex; align-items: center;
+    height: 32px; padding: 0 12px; margin: 0 8px;
+    background: var(--ck-surface);
+    border: 1px solid transparent;
+    border-radius: 9px;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+  }
+  .url-wrap.cuckoo-hidden { display: none; }
+  .url-wrap:hover { background: var(--ck-surface-hover); }
+  .url-wrap:focus-within { border-color: var(--ck-primary); background: var(--ck-bg); box-shadow: 0 0 0 3px var(--ck-primary-soft); }
+  .lock { width: 13px; height: 13px; flex-shrink: 0; margin-right: 9px; color: var(--ck-green); }
+  .url-input {
+    flex: 1; border: none; outline: none; background: transparent;
+    color: var(--ck-text); font-size: 13px; font-family: inherit;
+  }
+  .url-input::placeholder { color: var(--ck-text-dim); }
+  .url-input::selection { background: var(--ck-primary); color: #fff; }
+  .divider { width: 1px; height: 18px; background: var(--ck-border-strong); margin: 0 6px; }
+  /* 平台选择模式：地址栏工具条隐藏导航/地址输入（只留空白） */
+  .toolbar.ck-toolbar-plain .nav-btn,
+  .toolbar.ck-toolbar-plain .url-wrap,
+  .toolbar.ck-toolbar-plain .divider,
+  .toolbar.ck-toolbar-plain #project-picker { display: none; }
+
+  /* ===== 状态条（窗口底部，显示当前上下文 token）===== */
+  .statusbar {
+    display: flex;
+    align-items: center; justify-content: flex-end; gap: 12px;
+    height: 28px; padding: 0 16px;
+    background: var(--ck-bg-sub);
+    border-top: 1px solid var(--ck-border);
+    flex-shrink: 0;
+    font-size: 11.5px; color: var(--ck-text-2);
+    user-select: none;
+  }
+  .statusbar .sb-item { display: flex; align-items: center; gap: 4px; }
+  .statusbar .sb-icon { font-size: 11px; opacity: .6; }
+  .statusbar .sb-label { font-size: 11px; color: var(--ck-text-dim); }
+  .statusbar .sb-value { color: var(--ck-text); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .statusbar .sb-item[title] { cursor: help; }
+  .statusbar .sb-sep { width: 1px; height: 11px; background: var(--ck-border-strong); margin: 0 2px; }
+  .statusbar .sb-spacer { flex: 1; }
+  /* 最近使用（技能/MCP/子代理） */
+  .sb-recent { display: flex; align-items: center; gap: 6px; overflow: hidden; min-width: 0; }
+  .sb-recent-label { font-size: 10.5px; color: var(--ck-text-dim); flex-shrink: 0; }
+  .sb-chip {
+    font-size: 10.5px; padding: 1px 8px; border-radius: 999px;
+    cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+    transition: filter .15s, transform .1s;
+    border: 1px solid transparent;
+  }
+  .sb-chip:hover { filter: brightness(1.15); }
+  .sb-chip:active { transform: scale(.96); }
+  .sb-chip-skill { color: var(--ck-primary); background: var(--ck-primary-soft); border-color: color-mix(in srgb, var(--ck-primary) 30%, transparent); }
+  .sb-chip-mcp { color: var(--ck-green); background: color-mix(in srgb, var(--ck-green) 14%, transparent); border-color: color-mix(in srgb, var(--ck-green) 34%, transparent); }
+  .sb-chip-agent { color: #d97757; background: color-mix(in srgb, #d97757 14%, transparent); border-color: color-mix(in srgb, #d97757 34%, transparent); }
+  .sb-chip-snippet { color: #9b7bfa; background: color-mix(in srgb, #9b7bfa 14%, transparent); border-color: color-mix(in srgb, #9b7bfa 34%, transparent); }
+
+  /* ===== 主区域 ===== */
+  .main-area { flex: 1; display: flex; min-height: 0; }
+  .viewport { flex: 1; min-width: 0; }
+
+  /* ===== 侧边栏 ===== */
+  .ck-sidebar { width: 320px; flex-shrink: 0; display: flex; position: relative; background: var(--ck-bg); border-right: 1px solid var(--ck-border); }
+  .ck-activitybar {
+    width: 48px; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 12px 0; gap: 2px;
+    background: var(--ck-bg-sub);
+  }
+  .ck-ab-item {
+    width: 36px; height: 36px; border: none; border-radius: 8px;
+    background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; transition: background .15s;
+  }
+  .ck-ab-item:hover { background: var(--ck-surface-hover); }
+  .ck-ab-item:active { transform: scale(0.92); }
+  .ck-ab-icon { width: 18px; height: 18px; opacity: .45; transition: opacity .15s, color .15s; color: var(--ck-text); }
+  .ck-ab-text { font-size: 15px; font-weight: 700; line-height: 1; opacity: .45; transition: opacity .15s, color .15s; color: var(--ck-text); }
+  .ck-ab-item:hover .ck-ab-icon, .ck-ab-item:hover .ck-ab-text { opacity: .8; }
+  .ck-ab-item.ck-ab-active { background: var(--ck-primary-soft); }
+  .ck-ab-item.ck-ab-active .ck-ab-icon, .ck-ab-item.ck-ab-active .ck-ab-text { opacity: 1; color: var(--ck-primary); }
+  .ck-ab-spacer { flex: 1; }
+
+  .ck-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+  /* 面板列：左（各页）+ 右（文件预览，默认隐藏） */
+  .ck-panel-cols { flex: 1; min-width: 0; display: flex; flex-direction: row; overflow: hidden; }
+  .ck-panel-body { flex: 1; min-width: 0; overflow-y: auto; padding: 16px 8px; display: flex; flex-direction: column; gap: 14px; }
+  .ck-tab { display: none; flex-direction: column; gap: 14px; }
+  .ck-tab.ck-tab-active { display: flex; }
+  .ck-placeholder { color: var(--ck-text-dim); font-size: 12px; text-align: center; padding: 20px 0; }
+
+  /* ===== 自绘标题栏：拖拽区 + 窗口控制按钮 ===== */
+  .toolbar {
+    -webkit-app-region: drag;
+  }
+  /* macOS：左上角给系统红绿灯留出空间 */
+  body.ck-mac .toolbar { padding-left: 78px; }
+  .toolbar button,
+  .toolbar input,
+  .toolbar .url-wrap,
+  .toolbar .ck-win-controls {
+    -webkit-app-region: no-drag;
+  }
+  .ck-win-divider {
+    margin-left: auto;
+  }
+  .ck-win-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 6px;
+    flex-shrink: 0;
+  }
+  .ck-win-btn {
+    width: 34px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ck-text-2);
+    cursor: pointer;
+    transition: background .14s, color .14s;
+  }
+  .ck-win-btn svg {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+  }
+  .ck-win-btn:hover {
+    background: var(--ck-surface-hover);
+    color: var(--ck-text);
+  }
+  .ck-win-close:hover {
+    background: #e5484d;
+    color: #fff;
+  }
+
+/* ===== 卡片 ===== */
+  .ck-card {
+    background: var(--ck-bg);
+    border: 1px solid var(--ck-border);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex; flex-direction: column; gap: 11px;
+    box-shadow: var(--ck-shadow-sm);
+  }
+  .ck-label { font-size: 10.5px; font-weight: 600; color: var(--ck-text-dim); letter-spacing: .6px; text-transform: uppercase; }
+  .ck-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .ck-divider { border-top: 1px solid var(--ck-border); margin: 1px 0; }
+  .ck-actions { display: flex; align-items: center; gap: 8px; }
+
+  /* ===== 按钮 ===== */
+  .ck-btn {
+    flex: 1; padding: 10px 16px; border: 1px solid transparent;
+    border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; transition: all .15s; letter-spacing: 1.5px;
+    font-family: inherit;
+  }
+  .ck-btn:active { transform: scale(0.98); }
+  .ck-btn-primary { background: var(--ck-primary); color: #fff; box-shadow: 0 1px 2px rgba(77,107,254,.28); }
+  .ck-btn-primary:hover { background: var(--ck-primary-strong); box-shadow: 0 3px 10px rgba(77,107,254,.32); transform: translateY(-1px); }
+  .ck-btn-primary:active { transform: translateY(0) scale(0.98); }
+  .ck-btn-secondary { background: var(--ck-bg); color: var(--ck-text); border-color: var(--ck-border-strong); }
+  .ck-btn-secondary:hover { background: var(--ck-hover-bg); border-color: transparent; }
+  .ck-btn-text { background: none; border: none; color: var(--ck-text-dim); padding: 4px 0; text-align: left; font-size: 11px; cursor: pointer; font-family: inherit; transition: color .15s; }
+  .ck-btn-text:hover { color: var(--ck-danger); }
+  /* 幽灵按钮（白�?深底 + 主文字色，参�?DeepSeek「开启新对话」） */
+  .ck-btn-ghost {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    background: var(--ck-bg); color: var(--ck-text);
+    border-color: var(--ck-border-strong); font-weight: 500;
+  }
+  .ck-btn-ghost:hover { background: var(--ck-hover-bg); border-color: var(--ck-border-strong); transform: none; }
+  .ck-btn-ghost:active { transform: scale(0.98); }
+  .ck-btn-icon { width: 15px; height: 15px; flex-shrink: 0; }
+  /* 提示词页按钮：无边框（hover 背景效果保持�?*/
+  #snip-init-project, #snip-add { border-color: transparent; }
+  #snip-init-project:hover, #snip-add:hover { border-color: transparent; }
+  /* 按钮动画组件�?ck-btn-anim）：独占整行的按钮用
+   * 默认内容偏左 �?悬停平滑居中（用伪元素做"弹性空�?，无需�?HTML 结构�?
+   * 用法�?button class="ck-btn ... ck-btn-anim"><svg/><span>文字</span></button>
+   */
+  .ck-btn-anim {
+    display: flex; align-items: center; justify-content: center; gap: 0;
+    background: transparent; border-color: transparent; color: var(--ck-primary);
+    box-shadow: none;
+  }
+  .ck-btn-anim:hover {
+    background: var(--ck-hover-bg); border-color: transparent;
+    color: var(--ck-primary); box-shadow: none; transform: none;
+  }
+  .ck-btn-anim > .ck-btn-icon { margin-right: 7px; }
+  .ck-btn-anim > span { white-space: nowrap; }
+  .ck-btn-anim::before, .ck-btn-anim::after { content: ''; flex: 0 0 0; transition: flex-grow .3s ease; }
+  .ck-btn-anim::after { flex-grow: 1; }
+  .ck-btn-anim:hover::before, .ck-btn-anim:hover::after { flex-grow: 1; }
+  /* 窗口页顶部：两行按钮（新建窗口+刷新 / 新建窗口组），行间留距 */
+  .ck-tab[data-panel="windows"] .ck-actions { gap: 8px; }
+  .ck-tab[data-panel="windows"] .ck-actions + .ck-actions { margin-top: 8px; }
+  /* 方形图标按钮 */
+  .ck-icon-btn {
+    flex: 0 0 32px; width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: 9px;
+    background: transparent; color: var(--ck-text-dim);
+    cursor: pointer; transition: all .15s; padding: 0;
+    align-self: center;
+  }
+  .ck-icon-btn:hover { background: var(--ck-surface); color: var(--ck-text); }
+  .ck-icon-btn:active { transform: scale(0.96); }
+  .ck-icon-btn svg { width: 16px; height: 16px; }
+  /* 刷新按钮：悬停正向转一圈，移开反向转回�?*/
+  .ck-icon-btn svg { transition: transform .6s ease; }
+  .ck-icon-btn:hover svg { transform: rotate(360deg); }
+
+  /* ===== 列表 ===== */
+  .ck-list { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+  .ck-list-item {
+    background: var(--ck-surface); border-radius: 9px; padding: 10px 12px;
+    font-size: 12px; cursor: pointer; transition: all .15s;
+  }
+  .ck-list-item:hover { background: var(--ck-primary-soft); }
+  .ck-list-empty { color: var(--ck-text-dim); font-size: 12px; text-align: center; padding: 16px 0; }
+  /* 快速提示词/技�?MCP/窗口：详情默认隐藏，鼠标悬停才显示（逐渐变高动画�?*/
+  .ck-snip-item .ck-snip-preview,
+  .ck-skill-item .ck-skill-desc,
+  .ck-mcp-item .ck-mcp-bottom,
+  .ck-win-item .ck-win-bottom { display: none; }
+  @keyframes ck-detail-in {
+    from { opacity: 0; max-height: 0; transform: translateY(-3px); }
+    to   { opacity: 1; max-height: 140px; transform: translateY(0); }
+  }
+  .ck-snip-item:hover .ck-snip-preview,
+  .ck-skill-item:hover .ck-skill-desc {
+    display: -webkit-box;
+    animation: ck-detail-in .38s cubic-bezier(.22,.61,.36,1);
+    overflow: hidden;
+  }
+  .ck-mcp-item:hover .ck-mcp-bottom,
+  .ck-win-item:hover .ck-win-bottom {
+    display: flex;
+    animation: ck-detail-in .38s cubic-bezier(.22,.61,.36,1);
+    overflow: hidden;
+  }
+  /* 窗口「默认打开」已勾�?�?底部常驻显示 */
+  .ck-win-item:has(.ck-win-check-on) .ck-win-bottom { display: flex; }
+  /* 子代理卡片操作按钮（悬停显示，复用提示词卡样式） */
+  .ck-agent-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .ck-skill-item:hover .ck-agent-actions { opacity: 1; pointer-events: auto; }
+  .ck-skill-top { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+  /* 子代理卡片：描述默认隐藏，悬停才显示（逐渐变高动画�?*/
+  .ck-agent-item .ck-skill-desc { display: none; }
+  .ck-agent-item:hover .ck-skill-desc {
+    display: block;
+    animation: ck-detail-in .38s cubic-bezier(.22,.61,.36,1);
+    overflow: hidden;
+  }
+  /* 技能卡片（无边�?+ 分割�?+ 悬停浅底�?*/
+  /* 运行中子代理卡片 */
+  .ck-agent-running { border-left: 2px solid var(--ck-accent, #4c8dff); }
+  .ck-agent-running .ck-skill-desc { display: block; }
+  .ck-agent-running-status { margin-left: auto; font-size: 11px; color: var(--ck-text-dim); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .ck-agent-running-preview {
+    margin-top: 4px; padding: 6px 8px;
+    background: rgba(0,0,0,.15);
+    border-radius: 5px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px; line-height: 1.5;
+    color: var(--ck-text-dim);
+    white-space: pre-wrap; word-break: break-all;
+    max-height: 72px; overflow: hidden;
+  }
+  .ck-agent-running .ck-skill-name::before {
+    content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: #34d399; margin-right: 7px; vertical-align: middle;
+    animation: ck-agent-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes ck-agent-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52,211,153,.5); }
+    50% { opacity: .6; box-shadow: 0 0 0 4px rgba(52,211,153,0); }
+  }
+  .ck-skill-item {
+    display: flex; flex-direction: column; gap: 6px;
+    background: transparent; border: none;
+    border-radius: 0; padding: 11px 12px;
+    cursor: pointer; transition: background .18s, border-radius .2s ease;
+  }
+  .ck-skill-item + .ck-skill-item { border-top: 1px solid var(--ck-border); }
+  .ck-skill-item:hover { background: var(--ck-surface); border-radius: 12px; border-top-color: transparent; }
+  .ck-skill-item:hover + .ck-skill-item { border-top-color: transparent; }
+  .ck-skill-top { display: flex; align-items: center; gap: 8px; }
+  .ck-skill-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--ck-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ck-skill-src { font-size: 10px; color: var(--ck-text-dim); padding: 2px 7px; background: var(--ck-surface); border-radius: 6px; flex-shrink: 0; }
+  .ck-skill-desc {
+    font-size: 11.5px; color: var(--ck-text-2); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* MCP 分组标题 */
+  .ck-mcp-group-title {
+    font-size: 10.5px; font-weight: 700; color: var(--ck-text-dim);
+    letter-spacing: .5px; padding: 2px 2px 0;
+  }
+  /* MCP 卡片（无边框 + 分割�?+ 悬停浅底�?*/
+  .ck-mcp-item {
+    display: flex; flex-direction: column; gap: 8px;
+    background: transparent; border: none;
+    border-radius: 0; padding: 11px 12px;
+    cursor: pointer; transition: background .18s, border-radius .2s ease;
+  }
+  .ck-mcp-item + .ck-mcp-item { border-top: 1px solid var(--ck-border); }
+  .ck-mcp-item:hover { background: var(--ck-surface); border-radius: 12px; border-top-color: transparent; }
+  .ck-mcp-item:hover + .ck-mcp-item { border-top-color: transparent; }
+  .ck-mcp-top { display: flex; align-items: center; gap: 8px; }
+  .ck-mcp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--ck-text-dim); }
+  .ck-mcp-dot.on { background: var(--ck-green); box-shadow: 0 0 0 3px rgba(48,164,108,.15); }
+  .ck-mcp-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--ck-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ck-mcp-toggle { flex-shrink: 0; }
+  .ck-mcp-bottom { display: flex; align-items: center; gap: 6px; padding-left: 16px; }
+  .ck-mcp-tag {
+    font-size: 10px; color: var(--ck-text-dim);
+    padding: 2px 7px; background: var(--ck-surface); border-radius: 6px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  /* 设置表单（分组复�?.ck-card�?*/
+  .ck-set-group-title {
+    font-size: 12px; font-weight: 700; color: var(--ck-text);
+    padding-bottom: 2px;
+  }
+  .ck-set-field { display: flex; flex-direction: column; gap: 6px; }
+  .ck-set-field.ck-set-toggle { flex-direction: row; align-items: center; justify-content: space-between; }
+  .ck-set-key { font-size: 12px; color: var(--ck-text-2); }
+  .ck-set-input {
+    width: 100%; min-height: 32px;
+    background: var(--ck-surface); border: 1px solid transparent;
+    border-radius: 9px; padding: 7px 10px; color: var(--ck-text);
+    font-size: 12.5px; font-family: inherit;
+  }
+  .ck-set-input:focus { outline: none; border-color: var(--ck-primary); box-shadow: 0 0 0 3px var(--ck-primary-soft); }
+  /* select：原生选项弹层跟随 color-scheme（否则深色主题下白底白字看不清） */
+  select.ck-set-input { color-scheme: light; }
+  body[data-ck-dark] select.ck-set-input { color-scheme: dark; }
+  select.ck-set-input option { background: var(--ck-bg); color: var(--ck-text); }
+  .ck-set-textarea {
+    width: 100%; background: var(--ck-surface); border: 1px solid transparent;
+    border-radius: 9px; padding: 8px 10px; color: var(--ck-text);
+    font-size: 12.5px; font-family: inherit; resize: vertical; line-height: 1.5;
+  }
+  .ck-set-textarea:focus { outline: none; border-color: var(--ck-primary); box-shadow: 0 0 0 3px var(--ck-primary-soft); }
+  .ck-set-inline { display: flex; align-items: center; gap: 8px; }
+  .ck-set-sep { font-size: 12px; color: var(--ck-text-dim); flex-shrink: 0; }
+  /* 飞书�?*/
+  .fs-status { display: flex; align-items: center; gap: 7px; }
+  .fs-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--ck-text-dim); }
+  .fs-dot.connected { background: var(--ck-green); box-shadow: 0 0 0 3px rgba(48,164,108,.15); }
+  .fs-dot.error { background: var(--ck-danger); }
+  .fs-dot.connecting { background: var(--ck-primary); animation: ck-pulse 1.2s infinite; }
+  @keyframes ck-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  /* 关于�?*/
+  .ck-about-head { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 0 6px; }
+  .ck-about-logo {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--ck-primary), var(--ck-primary-strong));
+    color: #fff; font-size: 26px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ck-about-title { font-size: 15px; font-weight: 700; color: var(--ck-text); }
+  .ck-about-ver { font-size: 11.5px; color: var(--ck-text-dim); }
+  .ck-about-intro { font-size: 12px; color: var(--ck-text-2); line-height: 1.7; margin: 0; }
+  .ck-about-tip { font-size: 11px; color: var(--ck-text-dim); line-height: 1.6; margin: 0; }
+  .ck-about-group {
+    display: flex; flex-direction: column; gap: 8px;
+    background: var(--ck-bg); border: 1px solid var(--ck-border);
+    border-radius: 12px; padding: 14px; box-shadow: var(--ck-shadow-sm);
+  }
+  .ck-about-group-title { font-size: 12.5px; font-weight: 700; color: var(--ck-text); }
+  .ck-about-qr { width: 100%; max-width: 220px; align-self: center; border-radius: 10px; display: block; }
+  .ck-about-link { font-size: 12px; color: var(--ck-primary); cursor: pointer; word-break: break-all; text-decoration: none; }
+  .ck-about-link:hover { text-decoration: underline; }
+  /* 提示词卡片（无边�?+ 分割�?+ 悬停浅底�?*/
+  .ck-snip-item {
+    display: flex; flex-direction: column; gap: 6px;
+    background: transparent; border: none;
+    border-radius: 0; padding: 10px 12px;
+    cursor: pointer; transition: background .18s, border-radius .2s ease;
+  }
+  .ck-snip-item + .ck-snip-item { border-top: 1px solid var(--ck-border); }
+  .ck-snip-item:hover { background: var(--ck-surface); border-radius: 12px; border-top-color: transparent; }
+  .ck-snip-item:hover + .ck-snip-item { border-top-color: transparent; }
+  /* 标题行：名称 + 操作按钮（同高） */
+  .ck-snip-top { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+  .ck-snip-name { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--ck-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ck-snip-preview {
+    font-size: 11px; color: var(--ck-text-dim); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; word-break: break-all;
+  }
+  /* 操作按钮：默认隐藏，悬停卡片才显�?*/
+  .ck-snip-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .ck-snip-item:hover .ck-snip-actions { opacity: 1; pointer-events: auto; }
+  .ck-snip-icon-btn {
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent; border-radius: 7px;
+    color: var(--ck-text-dim); cursor: pointer; transition: all .15s; padding: 0;
+  }
+  .ck-snip-icon-btn:hover { background: var(--ck-surface); color: var(--ck-text); }
+  .ck-snip-icon-btn svg { width: 14px; height: 14px; }
+  .ck-snip-icon-btn.danger:hover { background: var(--ck-danger); color: #fff; }
+  .ck-snip-badge {
+    font-size: 9.5px; color: var(--ck-primary); background: var(--ck-primary-soft);
+    padding: 1px 6px; border-radius: 5px; margin-left: 6px; font-weight: 600;
+  }
+  /* 编辑弹层 */
+  .ck-modal-mask {
+    position: absolute; inset: 0; z-index: 20;
+    background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .ck-modal-mask.cuckoo-hidden { display: none; }
+  .ck-modal {
+    width: 100%; max-width: 300px; max-height: 90%; background: var(--ck-bg);
+    border: 1px solid var(--ck-border); border-radius: 14px;
+    box-shadow: var(--ck-shadow-lg); padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .ck-modal-title { font-size: 13px; font-weight: 700; color: var(--ck-text); }
+  .ck-field { display: flex; flex-direction: column; gap: 5px; }
+  .ck-field-label { font-size: 10.5px; font-weight: 600; color: var(--ck-text-dim); }
+  .ck-input, .ck-textarea {
+    width: 100%; background: var(--ck-surface); border: 1px solid transparent;
+    border-radius: 8px; padding: 8px 10px; color: var(--ck-text);
+    font-size: 12.5px; font-family: inherit;
+  }
+  .ck-input:focus, .ck-textarea:focus { outline: none; border-color: var(--ck-primary); box-shadow: 0 0 0 3px var(--ck-primary-soft); }
+  .ck-textarea { resize: vertical; min-height: 220px; line-height: 1.6; }
+  .ck-modal-foot { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ck-modal-foot .ck-btn { white-space: nowrap; }
+  #agent-modal .ck-modal { max-width: 360px; }
+  /* 通用弹框 */
+  .ck-dialog { max-width: 280px; }
+  .ck-dialog-msg { font-size: 12.5px; color: var(--ck-text-2); line-height: 1.6; word-break: break-word; }
+  /* 侧边栏相对定位（弹层锚点�?*/
+  .ck-panel { position: relative; }
+  /* 「文件」页内：左树 + 右预览 分栏 */
+  .ck-files-cols { flex: 1; min-height: 0; display: flex; flex-direction: row; overflow: hidden; }
+  .ck-preview-pane {
+    display: none; flex-direction: column;
+    width: 420px; flex-shrink: 0;
+    border-left: 1px solid var(--ck-border);
+    overflow: hidden; position: relative;
+  }
+  .ck-preview-pane.open { display: flex; }
+  .ck-preview-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 10px 10px 14px; border-bottom: 1px solid var(--ck-border);
+    flex-shrink: 0;
+  }
+  .ck-preview-name {
+    flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: var(--ck-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ck-preview-size { font-size: 10.5px; color: var(--ck-text-dim); flex-shrink: 0; }
+  .ck-preview-acts { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .ck-preview-btn {
+    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; font-size: 13px; color: var(--ck-text-dim); cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .ck-preview-btn:hover { background: var(--ck-surface-hover); color: var(--ck-text); }
+  .ck-preview-body { flex: 1; overflow: hidden; position: relative; }
+  .ck-monaco { position: absolute; inset: 0; }
+  .ck-preview-body pre {
+    margin: 0; padding: 12px 14px;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 12px; line-height: 1.6; white-space: pre; tab-size: 2;
+    color: var(--ck-text-2);
+  }
+  .ck-preview-empty { padding: 30px 16px; text-align: center; color: var(--ck-text-dim); font-size: 12px; }
+  /* 预览区左缘拖拽手柄 */
+  .ck-preview-resizer {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+    cursor: col-resize; z-index: 5;
+  }
+  .ck-preview-resizer:hover { background: var(--ck-primary-soft); }
+  /* 窗口卡片（两行） */
+  .ck-win-item {
+    display: flex; flex-direction: column; gap: 9px;
+    background: transparent;
+    border: none;
+    border-radius: 0; padding: 12px;
+    cursor: pointer; transition: background .18s, border-radius .2s ease;
+  }
+  .ck-win-item + .ck-win-item { border-top: 1px solid var(--ck-border); }
+  /* 悬停：浅底色 + 取消上方分割线（连同下一个元素的上边线） */
+  .ck-win-item:hover { background: var(--ck-surface); border-radius: 12px; border-top-color: transparent; }
+  .ck-win-item:hover + .ck-win-item { border-top-color: transparent; }
+  .ck-win-top { display: flex; align-items: center; gap: 10px; }
+  .ck-win-avatar {
+    width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--ck-primary), var(--ck-primary-strong));
+    color: #fff; font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1;
+  }
+  .ck-win-name {
+    flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--ck-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ck-win-del {
+    width: 24px; height: 24px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 7px; font-size: 12px; color: var(--ck-text-dim);
+    cursor: pointer; transition: opacity .15s, background .15s, color .15s;
+    opacity: 0; pointer-events: none;   /* 默认隐藏，悬停卡片才出现 */
+  }
+  .ck-win-item:hover .ck-win-del { opacity: 1; pointer-events: auto; }
+  .ck-win-del:hover { background: var(--ck-danger); color: #fff; }
+  .ck-win-bottom { display: flex; align-items: center; gap: 8px; }
+  .ck-win-provider {
+    font-size: 10.5px; color: var(--ck-text-dim);
+    padding: 2px 8px; background: var(--ck-surface); border-radius: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-align: left;
+  }
+  .ck-win-check {
+    display: flex; align-items: center; gap: 4px; margin-left: auto;
+    font-size: 11px; color: var(--ck-text-dim); cursor: pointer; flex-shrink: 0;
+    opacity: 0; pointer-events: none;   /* 未勾选时默认隐藏，悬停卡片才出现 */
+    transition: opacity .15s;
+  }
+  .ck-win-item:hover .ck-win-check { opacity: 1; pointer-events: auto; }
+  /* 已勾选「默认打开」：始终可见 */
+  .ck-win-check.ck-win-check-on { opacity: 1; pointer-events: auto; }
+  .ck-win-check input { accent-color: var(--ck-primary); cursor: pointer; margin: 0; }
+  /* 窗口组 */
+  .ck-wg { margin-bottom: 6px; }
+  .ck-wg-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 12px; border-radius: 8px;
+    background: var(--ck-surface);
+  }
+  .ck-wg-name { font-size: 12px; font-weight: 600; color: var(--ck-text); }
+  .ck-wg-switch {
+    margin-left: auto; font-size: 11px; color: var(--ck-primary);
+    padding: 2px 10px; border-radius: 6px; cursor: pointer;
+    background: var(--ck-primary-soft); transition: background .15s;
+  }
+  .ck-wg-switch:hover { background: var(--ck-primary); color: #fff; }
+  .ck-wg-manage {
+    font-size: 11px; color: var(--ck-text-dim);
+    padding: 2px 8px; border-radius: 6px; cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .ck-wg-manage:hover { background: var(--ck-surface-hover); color: var(--ck-text); }
+  .ck-wg-last {
+    margin: 4px 0 2px 12px; padding: 4px 8px;
+    font-size: 11px; color: var(--ck-text-dim);
+    border-left: 2px solid var(--ck-primary-soft);
+    border-radius: 4px; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: background .15s, color .15s;
+  }
+  .ck-wg-last:hover { background: var(--ck-surface-hover); color: var(--ck-primary); }
+  /* 管理窗口组弹窗：成员列表 */
+  .ck-wg-members { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
+  .ck-wg-member {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 7px;
+    background: var(--ck-surface); font-size: 12px; color: var(--ck-text-2);
+  }
+  .ck-wg-member-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ck-wg-member-del {
+    width: 20px; height: 20px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; font-size: 11px; color: var(--ck-text-dim); cursor: pointer;
+  }
+  .ck-wg-member-del:hover { background: var(--ck-danger); color: #fff; }
+  .ck-wg-member-empty { font-size: 11.5px; color: var(--ck-text-dim); padding: 4px 2px; }
+  .ck-wg-del {
+    width: 20px; height: 20px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; font-size: 11px; color: var(--ck-text-dim);
+    cursor: pointer; transition: background .15s, color .15s;
+  }
+  .ck-wg-del:hover { background: var(--ck-danger); color: #fff; }
+  .ck-wg-body { padding-left: 8px; }
+  .ck-wg-ungrouped { opacity: .85; }
+  .ck-wg-ungrouped .ck-wg-head { background: transparent; }
+  /* 右键上下文菜单 */
+  .ck-ctx-menu {
+    position: fixed; z-index: 9999;
+    min-width: 140px; padding: 4px;
+    background: var(--ck-surface); border: 1px solid var(--ck-border);
+    border-radius: 9px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
+  }
+  .ck-ctx-item {
+    padding: 7px 10px; border-radius: 6px; font-size: 12px;
+    color: var(--ck-text-2); cursor: pointer; white-space: nowrap;
+  }
+  .ck-ctx-item:hover { background: var(--ck-surface-hover); color: var(--ck-text); }
+  .ck-ctx-item-new { color: var(--ck-primary); }
+  /* 收起：只隐藏面板，保留图标栏（宽度从 320 → 46）*/
+  .ck-sidebar.ck-collapsed { width: 46px; }
+  .ck-sidebar.ck-collapsed .ck-panel { display: none; }
+  /* 拖拽调宽手柄（贴右边，宽热区） */
+  .ck-sidebar-resizer {
+    position: absolute; top: 0; right: -3px; width: 7px; height: 100%;
+    cursor: col-resize; z-index: 30;
+  }
+  .ck-sidebar-resizer:hover { background: var(--ck-primary-soft); }
+  .ck-sidebar.ck-collapsed .ck-sidebar-resizer { display: none; }
+  /* 滚动条（跟随主题�?*/
+
+  /* ===== 项目文件树 ===== */
+  .ck-ft-search {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 10px; margin: 0 4px 6px;
+    background: var(--ck-surface); border-radius: 8px;
+  }
+  .ck-ft-search svg { width: 13px; height: 13px; color: var(--ck-text-dim); flex-shrink: 0; }
+  .ck-ft-search-input {
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 12px; color: var(--ck-text);
+  }
+  .ck-ft-search-input::placeholder { color: var(--ck-text-dim); }
+  .ck-ft-path { font-size: 10.5px; color: var(--ck-text-dim); margin-left: 6px; flex-shrink: 0; }
+  .ck-ft-hl { background: var(--ck-primary-soft); color: var(--ck-primary); border-radius: 2px; }
+  /* 文件页：树撑满面板剩余高度、内部滚动（横向滚动条固定可见区底部，不用把垂直滚到底） */
+  .ck-tab[data-panel="files"] { flex: 1; min-height: 0; }
+  .ck-ft { padding: 2px 0; overflow: auto; flex: 1; min-height: 0; }
+  /* 滚动条：与侧边栏一致（4px、圆角 2px、透明轨道） */
+  .ck-ft-row {
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border-radius: 6px; cursor: pointer;
+    font-size: 12.5px; color: var(--ck-text-2);
+    white-space: nowrap;
+    width: max-content; min-width: 100%; box-sizing: border-box;
+    transition: background .12s;
+  }
+  .ck-ft-row:hover { background: var(--ck-surface-hover); }
+  /* caret：右三角，展开时旋转 90°（VSCode 风） */
+  .ck-ft-caret {
+    width: 14px; height: 14px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ck-text-dim); transition: transform .12s;
+  }
+  .ck-ft-caret svg { width: 11px; height: 11px; }
+  .ck-ft-dir.open .ck-ft-caret { transform: rotate(90deg); }
+  /* 图标：文件夹/文件区分 */
+  .ck-ft-icon {
+    min-width: 15px; height: 15px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ck-ft-icon svg { width: 15px; height: 15px; }
+  /* 图标：目录=主色文件夹；媒体=图形；代码=圆角角标（VSCode Seti 风） */
+  .ck-ft-i-dir { color: var(--ck-primary); }
+  .ck-ft-i-file { color: var(--ck-text-dim); opacity: .8; }
+  .ck-ft-i-media { color: #a855f7; }
+  .ck-ft-badge {
+    min-width: 16px; height: 15px; padding: 0 3px; box-sizing: border-box;
+    border-radius: 3px;
+    background: currentColor;        /* 底色 = 类型色（由 ck-ft-c-* 提供）*/
+    -webkit-text-fill-color: #fff;   /* 白字 */
+    color: var(--ck-text-dim);
+    font-size: 8.5px; font-weight: 800; letter-spacing: -.2px;
+    line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  }
+  /* 文件名配色（原图标配色迁到文件名） */
+  .ck-ft-c-file { color: var(--ck-text-dim); }
+  .ck-ft-c-ts   { color: #2b7cc4; }
+  .ck-ft-c-js   { color: #c9a227; }
+  .ck-ft-c-json { color: #b8a400; }
+  .ck-ft-c-md   { color: #4a9eca; }
+  .ck-ft-c-css  { color: #8a5cf6; }
+  .ck-ft-c-html { color: #d9534f; }
+  .ck-ft-c-py   { color: #3572A5; }
+  .ck-ft-c-java { color: #b07219; }
+  .ck-ft-c-go   { color: #1aa5c4; }
+  .ck-ft-c-rs   { color: #c9784a; }
+  .ck-ft-c-rb   { color: #b03060; }
+  .ck-ft-c-php  { color: #6b7bb8; }
+  .ck-ft-c-c    { color: #6b7280; }
+  .ck-ft-c-cs   { color: #178600; }
+  .ck-ft-c-sh   { color: #5bad6f; }
+  .ck-ft-c-yml  { color: #c0392b; }
+  .ck-ft-c-xml  { color: #d97706; }
+  .ck-ft-c-sql  { color: #d97706; }
+  .ck-ft-c-img  { color: #a855f7; }
+  .ck-ft-c-txt  { color: #8a8f9b; }
+  .ck-ft-c-lock { color: #9ca3af; }
+  .ck-ft-name { white-space: nowrap; flex: 1; }
+  /* @ 按钮：悬停行才显示（始终占位防抖动） */
+  .ck-ft-at {
+    flex-shrink: 0; width: 18px; height: 18px; margin-left: 6px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 5px; font-size: 12px; font-weight: 700;
+    color: var(--ck-text-dim); cursor: pointer;
+    visibility: hidden; opacity: 0; transition: opacity .12s;
+  }
+  .ck-ft-row:hover .ck-ft-at { visibility: visible; opacity: 1; }
+  .ck-ft-at:hover { background: var(--ck-primary-soft); color: var(--ck-primary); }
+  .ck-ft-dir .ck-ft-name { color: var(--ck-text); font-weight: 500; }
+  .ck-ft-truncated { padding: 8px; font-size: 11px; color: var(--ck-text-dim); text-align: center; }
+
+  /* ===== 工作区（会话）===== */
+  .ck-ws-group { display: flex; flex-direction: column; }
+  .ck-ws-group + .ck-ws-group { margin-top: 6px; }
+  .ck-ws-group-title {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: var(--ck-text-dim);
+    padding: 5px 6px; border-radius: 7px; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: background .15s;
+  }
+  .ck-ws-group-title:hover { background: var(--ck-surface-hover); }
+  .ck-ws-group-title svg { width: 13px; height: 13px; flex-shrink: 0; opacity: .7; }
+  .ck-ws-gname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* 组按钮：悬停才显示（始终占位，避免抖动）*/
+  .ck-ws-gacts { display: flex; align-items: center; gap: 2px; flex-shrink: 0; visibility: hidden; opacity: 0; transition: opacity .12s; }
+  .ck-ws-group-title:hover .ck-ws-gacts { visibility: visible; opacity: 1; }
+  .ck-ws-gact {
+    display: flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 5px;
+    color: var(--ck-text-dim); cursor: pointer;
+  }
+  .ck-ws-gact:hover { background: var(--ck-surface-hover); color: var(--ck-text); }
+  .ck-ws-gact svg { width: 13px !important; height: 13px !important; opacity: 1 !important; }
+  .ck-ws-caret { width: 11px !important; height: 11px !important; transition: transform .15s; }
+  .ck-ws-group.open .ck-ws-caret { transform: rotate(90deg); }
+  .ck-ws-items { display: none; }
+  .ck-ws-group.open .ck-ws-items { display: block; }
+  .ck-ws-item {
+    position: relative;
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px 7px 20px; border-radius: 8px;
+    cursor: pointer; transition: background .15s;
+  }
+  .ck-ws-item:hover { background: var(--ck-surface-hover); }
+  .ck-ws-item:active { transform: scale(.99); }
+  .ck-ws-name {
+    flex: 1; min-width: 0; font-size: 12px; color: var(--ck-text-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ck-ws-item:hover .ck-ws-name { color: var(--ck-text); }
+  .ck-ws-time { font-size: 10.5px; color: var(--ck-text-dim); flex-shrink: 0; }
+  .ck-ws-item.current { background: var(--ck-primary-soft); }
+  .ck-ws-item.current .ck-ws-name { color: var(--ck-primary); font-weight: 600; }
+  /* 操作按钮组：绝对定位覆盖在"时间"位置，不占额外空间。
+     默认隐藏（显示时间）；悬停时时间隐藏、按钮出现。 */
+  .ck-ws-acts {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    display: none; align-items: center; gap: 2px;
+  }
+  .ck-ws-item:hover .ck-ws-acts { display: flex; }
+  .ck-ws-item:hover .ck-ws-time { visibility: hidden; }
+  .ck-ws-act {
+    display: flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; flex-shrink: 0; border-radius: 5px;
+    color: var(--ck-text-dim); cursor: pointer;
+  }
+  .ck-ws-act:hover { background: var(--ck-surface-hover); color: var(--ck-text); }
+  .ck-ws-act svg { width: 13px; height: 13px; }
+  /* 展开三角（子代理/压缩历史）：右三角，展开旋转 90° */
+  .ck-ws-expand {
+    width: 14px; height: 14px; flex-shrink: 0; margin-left: -10px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ck-text-dim); transition: transform .12s; border-radius: 4px;
+  }
+  .ck-ws-expand svg { width: 10px; height: 10px; }
+  .ck-ws-expand.open { transform: rotate(90deg); }
+  .ck-ws-expand:hover { background: var(--ck-surface-hover); color: var(--ck-text); }
+  .ck-ws-expand-hidden { visibility: hidden; }
+  /* 子节点（缩进） */
+  .ck-ws-item.sub { padding-left: 34px; }
+  .ck-ws-item.sub .ck-ws-name { color: var(--ck-text-dim); font-size: 11.5px; }
+  .ck-ws-item.sub.current .ck-ws-name { color: var(--ck-primary); }
+  /* 子节点分组标题（可点击展开/收起）*/
+  .ck-ws-subgroup-title {
+    padding: 5px 10px 5px 28px;
+    font-size: 10.5px; color: var(--ck-text-dim); font-weight: 600;
+    cursor: pointer; border-radius: 6px; display: flex; align-items: center;
+    transition: background .12s;
+  }
+  .ck-ws-subgroup-title:hover { background: var(--ck-surface-hover); }
+  .ck-ws-subgroup-title::before {
+    content: '▸ '; margin-right: 4px; font-size: 9px;
+  }
+  .ck-ws-subgroup-title.open::before { content: '▾ '; }
+  /* 已归档区 */
+  .ck-ws-archived { margin-top: 2px; }
+  .ck-ws-archived-title {
+    display: flex; align-items: center;
+    padding: 5px 10px 5px 20px; border-radius: 7px;
+    font-size: 11px; color: var(--ck-text-dim); cursor: pointer;
+    transition: background .15s;
+  }
+  .ck-ws-archived-title:hover { background: var(--ck-surface-hover); }
+  .ck-ws-archived-title::before { content: '▸ '; margin-right: 2px; font-size: 9px; }
+  .ck-ws-archived.open .ck-ws-archived-title::before { content: '▾ '; }
+  .ck-ws-archived-items { display: none; }
+  .ck-ws-archived.open .ck-ws-archived-items { display: block; }
+  /* 已归档项目（列表底部，折叠）*/
+  .ck-ws-archived-projects { margin-top: 10px; border-top: 1px solid var(--ck-border); padding-top: 6px; }
+  .ck-ws-archived-projects-title {
+    display: flex; align-items: center; padding: 6px 6px; border-radius: 7px;
+    font-size: 11px; color: var(--ck-text-dim); cursor: pointer; transition: background .15s;
+  }
+  .ck-ws-archived-projects-title:hover { background: var(--ck-surface-hover); }
+  .ck-ws-archived-projects-title::before { content: '▸ '; margin-right: 2px; font-size: 9px; }
+  .ck-ws-archived-projects.open .ck-ws-archived-projects-title::before { content: '▾ '; }
+  .ck-ws-archived-projects-items { display: none; }
+  .ck-ws-archived-projects.open .ck-ws-archived-projects-items { display: block; }
+  /* 项目悬停卡片（全路径 + 创建时间） */
+  .ck-ws-tip {
+    position: fixed; z-index: 999;
+    max-width: 300px; padding: 12px 14px;
+    background: var(--ck-text); color: var(--ck-bg);
+    border-radius: 12px; box-shadow: var(--ck-shadow-lg);
+    font-size: 12px; line-height: 1.6; pointer-events: none;
+    animation: ck-tip-in .12s ease;
+  }
+  @keyframes ck-tip-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+  .ck-ws-tip .ck-tip-name { font-weight: 600; font-size: 13px; margin-bottom: 5px; }
+  .ck-ws-tip .ck-tip-path { word-break: break-all; opacity: .75; font-size: 11.5px; }
+  .ck-ws-tip .ck-tip-time { margin-top: 5px; opacity: .6; font-size: 11px; }
+  /* ===== 子代理页：搜索 / 筛选 / 详情 ===== */
+  .ck-agent-search { margin: 6px 0 8px; }
+  .ck-agent-search .ck-input { font-size: 12px; }
+  .ck-agent-filter { display: flex; gap: 6px; margin-bottom: 10px; }
+  .ck-chip {
+    font-family: inherit; font-size: 11.5px; font-weight: 500;
+    padding: 4px 12px; border-radius: 20px; cursor: pointer;
+    background: transparent; border: 1px solid var(--ck-border); color: var(--ck-text-dim);
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .ck-chip:hover { background: var(--ck-surface-hover); color: var(--ck-text); }
+  .ck-chip-active { background: var(--ck-accent, #4c8dff); border-color: var(--ck-accent, #4c8dff); color: #fff; }
+  .ck-chip-active:hover { background: var(--ck-accent, #4c8dff); color: #fff; }
+  .ck-agent-src-badge {
+    font-size: 10px; font-weight: 500; padding: 1px 7px; border-radius: 20px;
+    background: rgba(107,116,130,.15); color: var(--ck-text-dim);
+    flex-shrink: 0; margin-left: 6px;
+  }
+  .ck-agent-actions { display: flex; gap: 2px; margin-left: auto; }
+  .ck-agent-detail-body { padding: 4px 0 10px; }
+  .ck-agent-detail-row { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--ck-border); font-size: 12px; }
+  .ck-agent-detail-row:last-child { border-bottom: none; }
+  .ck-agent-detail-k { color: var(--ck-text-dim); flex-shrink: 0; width: 52px; }
+  .ck-agent-detail-v { color: var(--ck-text); word-break: break-word; flex: 1; }
+  .ck-agent-detail-path { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: #7dd3fc; word-break: break-all; }
+  .ck-agent-detail-actions { margin-top: 12px; }
+
+/* ===== 目录 ===== */
+  .ck-dir-path {
+    font-family: "SF Mono", "Consolas", monospace; font-size: 11.5px;
+    color: var(--ck-text-2); word-break: break-all;
+    background: var(--ck-surface); padding: 6px 9px; border-radius: 7px;
+    line-height: 1.5;
+  }
+  .ck-mini-btn {
+    background: var(--ck-primary-soft); border: none; color: var(--ck-primary);
+    padding: 4px 12px; border-radius: 999px; cursor: pointer;
+    font-size: 11px; font-weight: 600; flex-shrink: 0; transition: all .15s;
+    font-family: inherit;
+  }
+  .ck-mini-btn:hover { background: var(--ck-primary); color: #fff; }
+
+  /* ===== Token 页 ===== */
+  .ck-token-hero {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 24px 0 20px;
+    background: linear-gradient(160deg, var(--ck-primary-soft), transparent);
+    border-radius: 14px;
+  }
+  .ck-token-hero-label { font-size: 10.5px; color: var(--ck-text-dim); letter-spacing: .6px; font-weight: 600; }
+  .ck-token-hero-value { display: flex; align-items: baseline; gap: 6px; }
+  .ck-token-hero-value > span:first-child {
+    font-size: 36px; font-weight: 700; color: var(--ck-primary);
+    font-family: "SF Mono", "Consolas", monospace; letter-spacing: -1.2px; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .ck-token-hero-unit { font-size: 12px; color: var(--ck-text-dim); }
+  /* 「万/亿」单位字：用普通字体（等宽字体无中文，会回退导致不协调） */
+  .ck-token-unit-char {
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: .72em; font-weight: 600; letter-spacing: 0; margin-left: 1px;
+  }
+  .ck-stat-list {
+    display: flex; flex-direction: column;
+    background: var(--ck-bg); border: 1px solid var(--ck-border);
+    border-radius: 12px; overflow: hidden;
+    box-shadow: var(--ck-shadow-sm);
+  }
+  .ck-stat-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; font-size: 12.5px;
+  }
+  .ck-stat-item + .ck-stat-item { border-top: 1px solid var(--ck-border); }
+  .ck-stat-key { color: var(--ck-text-2); }
+  .ck-stat-val {
+    color: var(--ck-text); font-weight: 600;
+    font-family: "SF Mono", "Consolas", monospace; font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .ck-auto-block {
+    display: flex; flex-direction: column; gap: 13px;
+    background: var(--ck-bg); border: 1px solid var(--ck-border);
+    border-radius: 12px; padding: 14px;
+    box-shadow: var(--ck-shadow-sm);
+  }
+  .ck-auto-head { display: flex; align-items: center; justify-content: space-between; }
+  .ck-auto-body { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ck-text-2); }
+  .ck-auto-body input[type="number"] {
+    width: 56px; background: var(--ck-surface); border: 1px solid transparent;
+    border-radius: 7px; padding: 5px 8px; color: var(--ck-text); font-size: 12.5px;
+    text-align: center; font-family: inherit;
+  }
+  .ck-auto-body input[type="number"]:focus { outline: none; border-color: var(--ck-primary); box-shadow: 0 0 0 3px var(--ck-primary-soft); }
+  /* 开关 */
+  .ck-switch { position: relative; display: inline-block; width: 38px; height: 22px; flex-shrink: 0; }
+  .ck-switch input { opacity: 0; width: 0; height: 0; }
+  .ck-switch-track {
+    position: absolute; inset: 0; border-radius: 11px;
+    background: var(--ck-border-strong); transition: background .2s; cursor: pointer;
+  }
+  .ck-switch-track::before {
+    content: ''; position: absolute; left: 3px; top: 3px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; transition: transform .2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,.2);
+  }
+  .ck-switch input:checked + .ck-switch-track { background: var(--ck-primary); }
+  .ck-switch input:checked + .ck-switch-track::before { transform: translateX(16px); }
+  /* 柱状图（横向：左日期 + 右横条） */
+  .ck-chart-block {
+    background: var(--ck-bg); border: 1px solid var(--ck-border);
+    border-radius: 12px; padding: 14px;
+    box-shadow: var(--ck-shadow-sm);
+  }
+  .ck-chart { display: flex; flex-direction: column; gap: 8px; }
+  .ck-bar-row { display: flex; align-items: center; gap: 10px; }
+  .ck-bar-label {
+    font-size: 10px; color: var(--ck-text-dim); white-space: nowrap;
+    font-family: "SF Mono", "Consolas", monospace; flex-shrink: 0; width: 34px;
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .ck-bar-track {
+    flex: 1; height: 12px; background: var(--ck-surface);
+    border-radius: 6px; overflow: hidden;
+  }
+  .ck-bar {
+    height: 100%; border-radius: 6px;
+    background: var(--ck-primary);
+    opacity: .35;
+    transition: width .3s ease, opacity .15s;
+    min-width: 3px;
+  }
+  .ck-bar-row:hover .ck-bar { opacity: 1; }
+
+  /* ===== 代码/结果 ===== */
+  .ck-code {
+    background: var(--ck-surface); border-radius: 8px; padding: 9px 11px;
+    font-family: "SF Mono", "Consolas", monospace; font-size: 11.5px;
+    color: var(--ck-text-2); line-height: 1.55;
+    max-height: 130px; overflow: auto; white-space: pre-wrap;
+    word-break: break-all; margin: 0;
+  }
+  .ck-task-status { display: inline-flex; align-items: center; gap: 5px; color: var(--ck-primary); font-weight: 600; }
+
+  /* ===== 对话（网页端会话列表） ===== */
+  .ck-conv-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: 12.5px; color: var(--ck-text-2); }
+  .ck-conv-item:hover { background: var(--ck-surface-hover); color: var(--ck-text); }
+  .ck-conv-item.ck-conv-active { background: var(--ck-primary-soft); color: var(--ck-primary); }
+  .ck-conv-item.ck-conv-disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+  .ck-conv-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ===== 插件卡片（市场 + 已安装）=====
+     不复用 .ck-snip-preview：那是单行截断的，简介会显示不全。 */
+  .ck-plugin-item { padding: 10px 12px; border-bottom: 1px solid var(--ck-border); }
+  .ck-plugin-item:last-child { border-bottom: none; }
+  .ck-plugin-item:hover { background: var(--ck-surface); }
+  .ck-plugin-head { display: flex; align-items: center; gap: 8px; }
+  .ck-plugin-name {
+    font-size: 13px; font-weight: 600; color: var(--ck-text);
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* AI 网关免责声明 */
+  .ck-plugin-disclaimer {
+    margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+    background: rgba(251, 191, 36, .08); border: 1px solid rgba(251, 191, 36, .28);
+    font-size: 12px; line-height: 1.6;
+  }
+  .ck-plugin-disclaimer-title { font-weight: 700; color: #fbbf24; margin-bottom: 4px; }
+  .ck-plugin-disclaimer-body { color: var(--ck-text-dim); }
+  .ck-plugin-disclaimer-body code {
+    background: var(--ck-surface); padding: 1px 4px; border-radius: 3px;
+    font-size: 11.5px; color: var(--ck-text);
+  }
+  .ck-plugin-disclaimer-link {
+    display: inline-block; margin-top: 8px; color: var(--ck-primary);
+    font-weight: 600; text-decoration: none; cursor: pointer;
+  }
+  .ck-plugin-disclaimer-link:hover { text-decoration: underline; }
+
+  /* 已安装 / 有更新 徽标 */
+  .ck-plugin-badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 4px;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .ck-plugin-badge.on { background: rgba(74, 222, 128, .15); color: var(--ck-green); }
+  .ck-plugin-badge.update { background: rgba(255, 193, 7, .16); color: #ffc107; }
+  .ck-plugin-badge.archived { background: rgba(255, 107, 122, .15); color: var(--ck-red); }
+  /* 简介：多行，允许折行 */
+  .ck-plugin-desc {
+    font-size: 12px; color: var(--ck-text-dim); margin-top: 5px;
+    line-height: 1.55; white-space: normal; word-break: break-word;
+  }
+  /* 元信息行 */
+  .ck-plugin-meta {
+    font-size: 11px; color: var(--ck-text-dim); margin-top: 7px;
+    display: flex; flex-wrap: wrap; gap: 3px 10px; align-items: center;
+  }
+  .ck-plugin-meta .sep { opacity: .4; }
+  /* 版本要求行 */
+  .ck-plugin-req { font-size: 11px; color: var(--ck-text-dim); margin-top: 5px; }
+  .ck-plugin-req.warn { color: #ffc107; }
+  .ck-plugin-req.err { color: var(--ck-text-dim); opacity: .75; }
+  /* 已安装行的开关与操作按钮 */
+  .ck-plugin-switch-row { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .ck-plugin-switch-label { font-size: 11px; color: var(--ck-text-dim); }
+  /* 插件卡片的操作按钮：**常驻可见**。
+     不要复用 .ck-snip-actions —— 它带 opacity:0 + pointer-events:none，
+     且显示规则绑定在 .ck-snip-item:hover 上；放进 .ck-plugin-item 会永远不可见也点不到。
+     插件卡片的安装/更新/卸载是主要操作，不该藏到悬停里。 */
+  .ck-plugin-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  /* 无配置时的占位：占住 ⚙ 的位置，保证各行开关/按钮对齐 */
+  .ck-snip-icon-placeholder { visibility: hidden; }
+
+
+  /* 手机端：默认展开侧栏，占满宽度（不做悬浮） */
+  .ck-sidebar { position: static !important; width: 100% !important; }
+  .ck-sidebar.ck-collapsed { width: 100% !important; }
+  .ck-panel { position: static !important; flex: 1 !important; width: auto !important; box-shadow: none !important; }
+  .ck-activitybar { width: 46px !important; }
+  .shell { height: 100vh; height: 100dvh; }
+  .toolbar { display: none !important; }        /* 顶部工具栏（窗口控制）手机端隐藏 */
+  .ck-sidebar-resizer { display: none !important; } /* 禁拖拽调宽 */
+  .ck-win-divider, .ck-win-controls { display: none !important; }
+  .viewport { display: none !important; }        /* 电脑端 AI 网页区，手机端不显示 */
+  body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+  .ck-list-item { padding: 12px 14px; }          /* 触控加大点击区 */
+  .ck-icon-btn { width: 36px; height: 36px; }
+  /* 顶部返回/标题条（手机端自绘，因为隐藏了 toolbar） */
+  .m-topbar {
+    display: flex; align-items: center; gap: 8px;
+    height: 48px; padding: 0 12px; padding-top: env(safe-area-inset-top);
+    min-height: calc(48px + env(safe-area-inset-top));
+    background: var(--ck-bg); border-bottom: 1px solid var(--ck-border);
+    flex-shrink: 0;
+  }
+  .m-topbar .m-title { flex: 1; font-size: 14px; font-weight: 600; text-align: center; }
+  .m-topbar .m-btn {
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent; color: var(--ck-text-2); cursor: pointer; border-radius: 9px;
+  }
+  .m-topbar .m-btn svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .m-status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ck-text-dim); }
+  .m-status-dot.on { background: var(--ck-green); }
+  .m-status-dot.busy { background: var(--ck-primary); animation: m-pulse 1.2s infinite; }
+  .m-status-dot.off { background: var(--ck-danger); }
+  @keyframes m-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .m-star {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin: 12px; padding: 11px; border-radius: 10px;
+    background: var(--ck-surface); color: var(--ck-text-2); font-size: 12.5px; text-decoration: none;
+  }
+  .m-star svg { width: 14px; height: 14px; stroke: var(--ck-primary); fill: none; stroke-width: 1.7; }
+  
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="m-topbar">
+    <button class="m-btn" id="m-back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div class="m-title">Cuckoo</div>
+    <span class="m-status-dot off" id="m-status"></span>
+  </div>
+  <div class="main-area">
+    <div class="ck-sidebar" id="ck-sidebar">
+        <div class="ck-activitybar">
+          <button class="ck-ab-item ck-ab-active" data-tab="workspaces" title="工作区（会话）">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="files" title="项目文件">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="snippets" title="提示词">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="memories" title="记忆">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.7V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3c1.8-1.2 3-3.3 3-5.7a7 7 0 0 0-7-7z"/><path d="M9 21h6"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="snapshots" title="快照">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="skills" title="技能">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="plugins" title="插件">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5a2.5 2.5 0 0 0-5 0V5H4a2 2 0 0 0-2 2v3.8h1.5a2.2 2.2 0 0 1 0 4.4H2V19a2 2 0 0 0 2 2h3.8v-1.5a2.2 2.2 0 0 1 4.4 0V21H18a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 0-5z"/></svg>
+          </button>
+          <!-- 对话入口：暂时注释（新合并来的功能，先隐藏）
+          <button class="ck-ab-item" data-tab="conversations" title="对话">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          -->
+          <button class="ck-ab-item" data-tab="agents" title="子代理">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1"/><path d="M8 13h.01"/><path d="M16 13h.01"/><path d="M9 17h6"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="mcp" title="MCP（连接器）">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M8 7H7a5 5 0 0 0 0 10h1"/><path d="M16 7h1a5 5 0 0 1 0 10h-1"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="windows" title="窗口">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="token" title="Token（词元）">
+            <span class="ck-ab-text">元</span>
+          </button>
+          <div class="ck-ab-spacer"></div>
+          <button class="ck-ab-item" data-tab="about" title="关于">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="feishu" title="飞书同步（手机）">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
+          </button>
+          <button class="ck-ab-item" data-tab="settings" title="设置">
+            <svg class="ck-ab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+
+      <div class="ck-panel">
+          <div class="ck-modal-mask cuckoo-hidden" id="snip-modal">
+            <div class="ck-modal">
+              <span class="ck-modal-title" id="snip-modal-title">编辑提示词</span>
+              <div class="ck-field">
+                <span class="ck-field-label">名称</span>
+                <input class="ck-input" id="snip-name" placeholder="如：生成项目说明" />
+              </div>
+              <div class="ck-field">
+                <span class="ck-field-label">内容</span>
+                <textarea class="ck-textarea" id="snip-content" placeholder="点击后将填入输入框的文本"></textarea>
+              </div>
+              <div class="ck-auto-head">
+                <span class="ck-field-label">自动发送</span>
+                <label class="ck-switch">
+                  <input type="checkbox" id="snip-autosend" checked />
+                  <span class="ck-switch-track"></span>
+                </label>
+              </div>
+              <div class="ck-modal-foot">
+                <button class="ck-btn ck-btn-secondary" id="snip-cancel">取消</button>
+                <button class="ck-btn ck-btn-primary" id="snip-save">保存</button>
+              </div>
+            </div>
+          </div>
+          <!-- 新建/编辑子代理弹窗 -->
+          <div class="ck-modal-mask cuckoo-hidden" id="agent-modal">
+            <div class="ck-modal">
+              <span class="ck-modal-title" id="agent-modal-title">新建子代理</span>
+              <div class="ck-field">
+                <span class="ck-field-label">名称</span>
+                <input class="ck-input" id="agent-name" placeholder="如：code-reviewer（英文）" />
+              </div>
+              <div class="ck-field" id="agent-scope-field">
+                <span class="ck-field-label">位置</span>
+                <select class="ck-input" id="agent-scope">
+                  <option value="project">项目级（.cuckoo/agents/）</option>
+                  <option value="user">用户级（~/.cuckoo/agents/）</option>
+                </select>
+              </div>
+              <p class="ck-about-tip" id="agent-modal-tip">生成模板后，会用系统默认程序打开，你直接编辑保存即可。</p>
+              <div class="ck-modal-foot">
+                <button class="ck-btn ck-btn-secondary cuckoo-hidden" id="agent-open-file">打开正文</button>
+                <button class="ck-btn ck-btn-secondary" id="agent-cancel">取消</button>
+                <button class="ck-btn ck-btn-primary" id="agent-create">创建并打开</button>
+              </div>
+            </div>
+          </div>
+          <!-- 窗口组管理弹窗 -->
+          <div class="ck-modal-mask cuckoo-hidden" id="wg-modal">
+            <div class="ck-modal">
+              <span class="ck-modal-title">管理窗口组</span>
+              <div class="ck-field">
+                <span class="ck-field-label">组名</span>
+                <input class="ck-input" id="wg-modal-name" placeholder="组名" />
+              </div>
+              <div class="ck-field">
+                <span class="ck-field-label">组内窗口（按顺序轮换）</span>
+                <div class="ck-wg-members" id="wg-modal-members"></div>
+              </div>
+              <div class="ck-field" id="wg-modal-add-wrap">
+                <span class="ck-field-label">添加窗口</span>
+                <select class="ck-input" id="wg-modal-add"></select>
+              </div>
+              <div class="ck-modal-foot">
+                <button class="ck-btn ck-btn-secondary" id="wg-modal-cancel">取消</button>
+                <button class="ck-btn ck-btn-primary" id="wg-modal-save">保存</button>
+              </div>
+            </div>
+          </div>
+          <!-- 通用输入弹窗（重命名会话等） -->
+          <div class="ck-modal-mask cuckoo-hidden" id="input-modal">
+            <div class="ck-modal">
+              <span class="ck-modal-title" id="input-modal-title">重命名</span>
+              <div class="ck-field">
+                <input class="ck-input" id="input-modal-value" placeholder="" />
+              </div>
+              <div class="ck-modal-foot">
+                <button class="ck-btn ck-btn-secondary" id="input-modal-cancel">取消</button>
+                <button class="ck-btn ck-btn-primary" id="input-modal-ok">确定</button>
+              </div>
+            </div>
+          </div>
+          <!-- 通用弹框（替代原生 alert/confirm） -->
+          <div class="ck-modal-mask cuckoo-hidden" id="ck-dialog">
+            <div class="ck-modal ck-dialog">
+              <span class="ck-modal-title" id="ck-dialog-title">提示</span>
+              <div class="ck-dialog-msg" id="ck-dialog-msg"></div>
+              <div class="ck-modal-foot">
+                <button class="ck-btn ck-btn-secondary cuckoo-hidden" id="ck-dialog-cancel">取消</button>
+                <button class="ck-btn ck-btn-primary" id="ck-dialog-ok">确定</button>
+              </div>
+            </div>
+          </div>
+
+        <div class="ck-panel-body">
+            <!-- ===== 工作区（会话） ===== -->
+            <div class="ck-tab ck-tab-active" data-panel="workspaces">
+              <div class="ck-actions">
+                <span class="ck-set-group-title" style="flex:1;">工作区</span>
+                <button class="ck-icon-btn" id="ws-refresh" title="刷新">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+              <div class="ck-list" id="ws-list">
+                <div class="ck-list-empty">加载中…</div>
+              </div>
+            </div>
+
+            <!-- ===== 对话（读网页端会话列表，实时同步） ===== -->
+            <div class="ck-tab" data-panel="conversations">
+              <div class="ck-actions">
+                <button class="ck-icon-btn" id="conv-new" title="新对话">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+                <span class="ck-set-group-title" style="flex:1;">对话</span>
+                <button class="ck-icon-btn" id="conv-refresh" title="刷新">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+              <div class="ck-list" id="conv-list">
+                <div class="ck-list-empty">加载中…</div>
+              </div>
+            </div>
+
+            <!-- ===== 记忆 ===== -->
+            <div class="ck-tab" data-panel="memories">
+              <div class="ck-actions">
+                <button class="ck-btn ck-btn-anim" id="mem-add">
+                  <svg class="ck-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>新建记忆</span>
+                </button>
+                <button class="ck-icon-btn" id="mem-refresh" title="刷新">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+              <div class="ck-actions" style="margin-bottom:8px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+                  <input type="checkbox" id="mem-enabled" />
+                  <span>启用记忆功能（关闭后不注入提示词、不捕获标记、不可调用）</span>
+                </label>
+              </div>
+              <p class="ck-about-tip">记忆会随系统提示词发给模型，让 AI 了解你的习惯（跨项目保留）。</p>
+              <div class="ck-list" id="mem-list">
+                <div class="ck-list-empty">加载中…</div>
+              </div>
+            </div>
+
+            <!-- ===== 快照 ===== -->
+            <div class="ck-tab" data-panel="snapshots">
+              <div class="ck-actions">
+                <button class="ck-btn ck-btn-anim" id="snap-add">
+                  <svg class="ck-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>创建快照</span>
+                </button>
+                <button class="ck-icon-btn" id="snap-refresh" title="刷新">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+              <p class="ck-about-tip">快照当前项目文件（不含 .git/node_modules），改坏可回滚。</p>
+              <div class="ck-list" id="snap-list">
+                <div class="ck-list-empty">加载中…</div>
+              </div>
+            </div>
+
+            <!-- ===== 技能 ===== -->
+            <div class="ck-tab" data-panel="skills">
+              <div class="ck-actions">
+                <span class="ck-set-group-title" style="flex:1;">技能</span>
+                <button class="ck-icon-btn" id="skill-refresh" title="刷新">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+              <div class="ck-list" id="skill-list">
+                <div class="ck-list-empty">加载中…</div>
+              </div>
+            </div>
+
+            <!-- ===== 插件 ===== -->
+            <div class="ck-tab" data-panel="plugins">
+              <div class="ck-actions">
+                <span class="ck-set-group-title" style="flex:1;">已安装插件</span>
+                <button class="ck-icon-btn" id="plugin-open-dir" title="打开插件目录">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                <button class="ck-icon-btn" id="plugin-refresh" title="刷新（重新搜索市场）">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+              <div class="ck-list" id="plugin-installed-list">
+                <div class="ck-list-empty">加载中…</div>
+              </div>
+              <div class="ck-actions">
+                <span class="ck-set-group-title" style="flex:1;">市场</span>
+                <span class="ck-snip-badge" title="唯一搜索源">topic:cuckoo-plugin</span>
+              </div>
+              <div class="ck-list" id="plugin-market-list">
+                <div class="ck-list-empty">加载中…</div>
+              </div>
+              <!-- ===== DSH 兼容插件（npm 安装）===== -->
+              <div class="ck-actions">
+                <span class="ck-set-group-title" style="flex:1;">DSH 插件（npm）</span>
+                <button class="ck-icon-btn" id="ckp-open-dir" title="打开插件目录">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                <button class="ck-icon-btn" id="ckp-install-btn" title="安装 DSH 插件（输入 npm 包名）">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+              </div>
+              <div class="ck-list" id="ckp-list">
+                <div class="ck-list-empty">加载中…</div>
+              </div>
+            </div>
+
+            <!-- ===== 设置 ===== -->
+            <div class="ck-tab" data-panel="settings">
+              <div class="ck-card">
+                <div class="ck-set-group-title">外观</div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">主题</span>
+                  <select class="ck-set-input" id="st-theme-select">
+                    <option value="system">跟随系统</option>
+                    <option value="light">浅色</option>
+                    <option value="dark">深色</option>
+                  </select>
+                </div>
+              </div>
+              <div class="ck-card">
+                <div class="ck-set-group-title">失败自动重试</div>
+                <div class="ck-set-field ck-set-toggle">
+                  <span class="ck-set-key">启用自动重试</span>
+                  <label class="ck-switch">
+                    <input type="checkbox" id="st-retry-enabled" />
+                    <span class="ck-switch-track"></span>
+                  </label>
+                </div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">普通失败间隔（秒）</span>
+                  <div class="ck-set-inline">
+                    <input type="number" class="ck-set-input" id="st-retry-delay-min" min="0" step="1" />
+                    <span class="ck-set-sep">至</span>
+                    <input type="number" class="ck-set-input" id="st-retry-delay-max" min="0" step="1" />
+                  </div>
+                </div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">普通失败重试次数（负数=无限）</span>
+                  <input type="number" class="ck-set-input" id="st-retry-count" step="1" />
+                </div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">操作频繁重试间隔（秒）</span>
+                  <input type="number" class="ck-set-input" id="st-retry-429-delay" min="0" step="1" />
+                </div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">操作频繁重试次数（负数=无限）</span>
+                  <input type="number" class="ck-set-input" id="st-retry-429-count" step="1" />
+                </div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">重试提示词</span>
+                  <textarea class="ck-set-textarea" id="st-retry-prompt" rows="3"></textarea>
+                </div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">AI 回复超时后重试（秒）</span>
+                  <input type="number" class="ck-set-input" id="st-xhr-idle-timeout" min="0" step="1" />
+                </div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">超时重试提示词</span>
+                  <input type="text" class="ck-set-input" id="st-watchdog-prompt" />
+                </div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">超时重试次数（负数=无限）</span>
+                  <input type="number" class="ck-set-input" id="st-watchdog-count" step="1" />
+                </div>
+              </div>
+
+              <div class="ck-card">
+                <div class="ck-set-group-title">发送延迟</div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">延迟区间（秒）</span>
+                  <div class="ck-set-inline">
+                    <input type="number" class="ck-set-input" id="st-send-delay-min" min="0" step="0.1" />
+                    <span class="ck-set-sep">至</span>
+                    <input type="number" class="ck-set-input" id="st-send-delay-max" min="0" step="0.1" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="ck-card">
+                <div class="ck-set-group-title">附件上传间隔</div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">上传后检测等待（秒）</span>
+                  <div class="ck-set-inline">
+                    <input type="number" class="ck-set-input" id="st-attach-delay-min" min="0" step="0.1" />
+                    <span class="ck-set-sep">至</span>
+                    <input type="number" class="ck-set-input" id="st-attach-delay-max" min="0" step="0.1" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="ck-card">
+                <div class="ck-set-group-title">网络安全</div>
+                <div class="ck-set-field ck-set-toggle">
+                  <span class="ck-set-key">拒绝 webFetch 访问内网/本地地址</span>
+                  <label class="ck-switch">
+                    <input type="checkbox" id="st-ssrf-guard" />
+                    <span class="ck-switch-track"></span>
+                  </label>
+                </div>
+                <p class="ck-about-tip">开启后，webFetch 将拒绝访问内网、回环、保留地址（防 SSRF）。默认关闭（可访问本地项目）。</p>
+              </div>
+
+              <div class="ck-actions">
+                <button class="ck-btn ck-btn-primary" id="st-save">保存设置</button>
+                <button class="ck-btn ck-btn-secondary" id="st-reset">恢复默认</button>
+                <button class="ck-icon-btn" id="st-refresh" title="刷新（重新读取当前设置）">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                </button>
+              </div>
+            </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="viewport"></div>
+  </div>
+    <div class="statusbar">
+      <div class="sb-recent" id="sb-recent"></div>
+      <div class="sb-spacer"></div>
+      <div class="sb-item" title="对话上下文：本会话当前占用的 token 总量">
+        <span class="sb-label">对话上下文:</span>
+        <span class="sb-value" id="sb-context">0</span>
+      </div>
+      <div class="sb-item" id="sb-tps-item" title="模型输出速度：tokens/秒（生成中实时更新，结束后保留最终值）">
+        <span class="sb-label">输出速度:</span>
+        <span class="sb-value" id="sb-tps">--</span>
+        <span class="sb-label">t/s</span>
+      </div>
+    </div>
+
+</div>
+<script>
+/**
+ * 手机端壳页面逻辑
+ *
+ * 1. shellAPI polyfill：把电脑端页面 JS 期望的 window.shellAPI 调用，
+ *    通过 WebSocket 转发到主进程（壳页桥，白名单）。
+ * 2. 活动栏 tab 切换 + 各页加载（P1：工作区/对话/记忆/快照/技能/插件/设置）。
+ *
+ * 构建时注入：{"navigate":"shell-navigate","back":"shell-back","forward":"shell-forward","reload":"shell-reload","home":"shell-home","getSystemTotal":"get-system-total","getProjectDir":"get-project-dir","initProject":"init-project","toggleSidebar":"shell-toggle-sidebar","listWebSessions":"web-list-sessions","navigateWebSession":"web-navigate-session","newWebConversation":"web-new-conversation","toggleHarness":"shell-toggle-harness","listPluginShellMounts":"plugin-shell-list","listPluginShellStyles":"plugin-shell-style-list","getShellBackground":"plugin-shell-background-list","commandInvoke":"plugin-command-invoke","commandList":"plugin-command-list","listPluginSlots":"plugin-slot-list","pluginConfigGet":"plugin-config-get","pluginConfigSet":"plugin-config-set","pluginHostCall":"plugin-host-call","wgList":"wg-list","wgCreate":"wg-create","wgAddWindow":"wg-add-window","wgRemoveWindow":"wg-remove-window","wgRename":"wg-rename","wgDelete":"wg-delete","wgSwitch":"wg-switch","listProfiles":"list-profiles","listProviders":"list-providers","createProfileWindow":"create-profile-window","openProfileWindow":"open-profile-window","deleteProfileWindow":"delete-profile","setProfileAutoOpen":"set-profile-auto-open","listAllSessions":"list-all-sessions","navigateSession":"navigate-session","setSessionArchived":"set-session-archived","getDirInfo":"get-dir-info","listProjectTree":"list-project-tree","readProjectFile":"read-project-file","openFileExternal":"open-project-file-external","setProjectArchived":"set-project-archived","setSessionTitle":"set-session-title","newConversationForProject":"new-conversation-for-project","listSnippets":"list-snippets","saveSnippets":"save-snippets","triggerSnippet":"trigger-snippet","listRunningSubagents":"subagent-list","windowMinimize":"shell-window-minimize","windowMaximize":"shell-window-maximize","windowClose":"shell-window-close","windowIsMaximized":"shell-window-is-maximized","themeGet":"theme-get","themeSet":"theme-set","themeList":"theme-list","themeSubscribe":"theme-subscribe","listSkills":"list-skills","listAgents":"list-agents","createAgentFile":"create-agent-file","openAgentFile":"open-agent-file","renameAgent":"rename-agent","deleteAgentFile":"delete-agent-file","listMcpServers":"list-mcp-servers","enableMcpServer":"enable-mcp-server","disableMcpServer":"disable-mcp-server","appendSnippet":"append-to-input","pluginMarketList":"plugin-market-list","pluginMarketRemote":"plugin-market-remote","pluginInstall":"plugin-install","pluginUninstall":"plugin-uninstall","listInstalledPlugins":"plugin-list-installed","pluginSetEnabled":"plugin-set-enabled","pluginOpenDir":"plugin-open-dir","cuckooPluginList":"cuckoo-plugin-list","cuckooPluginInstall":"cuckoo-plugin-install","cuckooPluginUninstall":"cuckoo-plugin-uninstall","cuckooPluginToggle":"cuckoo-plugin-toggle","cuckooPluginOpenDir":"cuckoo-plugin-open-dir","getAppInfo":"get-app-info","checkUpdate":"check-update","getAssetUrl":"get-asset-url","openExternal":"open-external","openFeishuSetup":"open-feishu-setup","getFeishuConfig":"feishu-get-config","saveFeishuConfig":"feishu-save-config","reconnectFeishu":"feishu-reconnect","disconnectFeishu":"feishu-disconnect","listFeishuChats":"feishu-list-chats","getFeishuBinding":"feishu-get-binding","bindFeishuChat":"feishu-bind-chat","getAutoCompact":"get-autocompact","saveAutoCompact":"save-autocompact","triggerCompact":"trigger-compact","listMemories":"list-memories","getMemoriesEnabled":"get-memories-enabled","setMemoriesEnabled":"set-memories-enabled","saveMemories":"save-memories","addMemory":"add-memory","deleteMemory":"delete-memory","listSnapshots":"list-snapshots","createSnapshot":"create-snapshot","restoreSnapshot":"restore-snapshot","deleteSnapshot":"delete-snapshot","getSettings":"get-settings","saveSettings":"save-settings","resetSettings":"reset-settings"} 方法→通道映射；[] 订阅方法。
+ */
+(function () {
+  var API_MAP = /*__API_MAP__*/ {};
+  var API_NOOP = /*__API_NOOP__*/ [];
+  var NOOP_SET = {};
+  API_NOOP.forEach(function (n) { NOOP_SET[n] = 1; });
+
+  // ================= WS + shellAPI polyfill =================
+  var ws = null, ready = false, pending = {}, seq = 0, retry = false;
+  var $status = document.getElementById('m-status');
+
+  function setStatus(cls) { if ($status) $status.className = 'm-status-dot ' + cls; }
+
+  function connect() {
+    if (retry) return;
+    var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    setStatus('off');
+    ws = new WebSocket(proto + location.host + '/ws');
+    ws.onopen = function () {
+      ready = true; setStatus('on');
+      // 连接后刷新当前页
+      var cur = currentTab(); if (cur && loaders[cur]) loaders[cur]();
+    };
+    ws.onclose = function (e) {
+      ready = false;
+      if (e && e.code === 4001) { retry = true; setStatus('off'); return; }
+      setStatus('off');
+      setTimeout(connect, 2000);
+    };
+    ws.onerror = function () { setStatus('off'); };
+    ws.onmessage = function (e) {
+      var msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+      if (msg.type === 'shell-resp' && msg.id && pending[msg.id]) {
+        var cb = pending[msg.id]; delete pending[msg.id];
+        cb(msg.result);
+      }
+    };
+  }
+
+  /** 调用一个白名单 IPC（走壳页桥） */
+  function invoke(channel, args) {
+    return new Promise(function (resolve) {
+      if (!ready) { resolve({ success: false, error: 'not-connected' }); return; }
+      var id = 'r' + (++seq);
+      pending[id] = resolve;
+      ws.send(JSON.stringify({ type: 'shell-api', id: id, channel: channel, args: args }));
+      setTimeout(function () { if (pending[id]) { delete pending[id]; resolve({ success: false, error: 'timeout' }); } }, 15000);
+    });
+  }
+
+  // shellAPI polyfill：名称 → 通道
+  var shellAPI = {};
+  Object.keys(API_MAP).forEach(function (name) {
+    shellAPI[name] = function (a) { return invoke(API_MAP[name], a); };
+  });
+  // 订阅类：no-op（返回一个空函数，让调用方不炸）
+  NOOP_SET && Object.keys(NOOP_SET).forEach(function (name) {
+    if (!shellAPI[name]) shellAPI[name] = function () { return function () {}; };
+  });
+  // 少数壳页逻辑直接用的同步方法：兜底 no-op
+  ['reportShellSize', 'startSidebarDrag', 'endSidebarDrag', 'toggleSidebar'].forEach(function (n) {
+    if (!shellAPI[n]) shellAPI[n] = function () {};
+  });
+  if (!shellAPI.openExternal) shellAPI.openExternal = function (url) { try { window.open(url, '_blank'); } catch (_) {} };
+  window.shellAPI = shellAPI;
+
+  // ================= tab 切换 =================
+  var loaders = {};
+  var TAB_TITLES = {
+    workspaces: '工作区', files: '项目文件', snippets: '提示词', memories: '记忆',
+    snapshots: '快照', skills: '技能', plugins: '插件', conversations: '对话',
+    agents: '子代理', mcp: 'MCP', windows: '窗口', token: 'Token',
+    about: '关于', feishu: '飞书', settings: '设置',
+  };
+  function currentTab() {
+    var it = document.querySelector('.ck-ab-item.ck-ab-active');
+    return it ? it.dataset.tab : null;
+  }
+  function activate(tab) {
+    document.querySelectorAll('.ck-ab-item').forEach(function (i) {
+      i.classList.toggle('ck-ab-active', i.dataset.tab === tab);
+    });
+    document.querySelectorAll('.ck-tab').forEach(function (p) {
+      p.classList.toggle('ck-tab-active', p.dataset.panel === tab);
+    });
+    var t = document.querySelector('.m-topbar .m-title');
+    if (t) t.textContent = TAB_TITLES[tab] || 'Cuckoo';
+  }
+  document.querySelector('.ck-activitybar').addEventListener('click', function (e) {
+    var it = e.target.closest && e.target.closest('.ck-ab-item');
+    if (!it || !it.dataset.tab) return;
+    var tab = it.dataset.tab;
+    activate(tab);
+    var f = loaders[tab];
+    if (f) { try { f(); } catch (err) { console.error(err); } }
+    else { placeholder(tab); }
+  });
+  function placeholder(tab) {
+    // 不支持的页：面板 body 里显示提示
+    var body = document.querySelector('.ck-panel-body');
+    if (!body) return;
+    body.innerHTML = '<div class="ck-tab ck-tab-active" data-panel="' + tab + '"><div class="ck-list-empty" style="padding-top:60px">' +
+      (TAB_TITLES[tab] || tab) + '：手机端暂不支持</div></div>';
+  }
+
+  // ================= 通用 =================
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function baseName(p) { if (!p) return ''; var a = String(p).replace(/[\\/]+$/, '').split(/[\\/]/); return a[a.length - 1] || p; }
+  function setList(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; }
+  function empty(id, text) { setList(id, '<div class="ck-list-empty">' + esc(text || '暂无数据') + '</div>'); }
+
+  // ================= 工作区 =================
+  loaders.workspaces = function () {
+    setList('ws-list', '<div class="ck-list-empty">加载中…</div>');
+    shellAPI.listAllSessions().then(function (r) {
+      if (!r || !r.success) { empty('ws-list', '加载失败'); return; }
+      var sessions = (r.sessions || []).filter(function (s) { return !s.archived && s.kind !== 'subagent'; });
+      if (!sessions.length) { empty('ws-list', '还没有会话'); return; }
+      // 按项目目录分组
+      var groups = {};
+      sessions.forEach(function (s) { (groups[s.projectDir] = groups[s.projectDir] || []).push(s); });
+      var html = '';
+      Object.keys(groups).forEach(function (dir) {
+        var list = groups[dir].sort(function (a, b) { return (Date.parse(b.updatedAt || 0) || 0) - (Date.parse(a.updatedAt || 0) || 0); });
+        html += '<div class="ck-set-group-title" style="padding:8px 2px 4px">' + esc(baseName(dir) || '未命名') + '</div>';
+        list.forEach(function (s) {
+          var cur = s.sessionId === r.currentSessionId;
+          html += '<div class="ck-list-item" data-sid="' + esc(s.sessionId) + '" style="' + (cur ? 'background:var(--ck-primary-soft)' : '') + '">' +
+            '<div style="font-size:12.5px;color:var(--ck-text)">' + esc(s.title || s.sessionId) + '</div></div>';
+        });
+      });
+      setList('ws-list', html);
+      document.querySelectorAll('#ws-list .ck-list-item').forEach(function (el) {
+        el.onclick = function () { shellAPI.navigateSession(el.dataset.sid); };
+      });
+    });
+  };
+
+  // ================= 对话（官网） =================
+  loaders.conversations = function () {
+    setList('conv-list', '<div class="ck-list-empty">加载中…</div>');
+    shellAPI.listWebSessions().then(function (r) {
+      if (!r || !r.success || !r.sessions || !r.sessions.length) { empty('conv-list', '暂无会话（或当前平台不支持）'); return; }
+      var html = r.sessions.slice(0, 60).map(function (s) {
+        return '<div class="ck-list-item" data-url="' + esc(s.href) + '" style="' + (s.active ? 'background:var(--ck-primary-soft)' : '') + '">' + esc(s.title) + '</div>';
+      }).join('');
+      setList('conv-list', html);
+      document.querySelectorAll('#conv-list .ck-list-item').forEach(function (el) {
+        el.onclick = function () { if (el.dataset.url) shellAPI.navigateWebSession(el.dataset.url); };
+      });
+    });
+    var nb = document.getElementById('conv-new'); if (nb) nb.onclick = function () { shellAPI.newWebConversation(); };
+    var rb = document.getElementById('conv-refresh'); if (rb) rb.onclick = loaders.conversations;
+  };
+
+  // ================= 记忆 =================
+  loaders.memories = function () {
+    setList('mem-list', '<div class="ck-list-empty">加载中…</div>');
+    shellAPI.getMemoriesEnabled().then(function (er) {
+      var cb = document.getElementById('mem-enabled');
+      if (cb && er && er.success) cb.checked = !!er.enabled;
+    });
+    shellAPI.listMemories().then(function (r) {
+      var list = (r && r.memories) || [];
+      if (!list.length) { empty('mem-list', '还没有记忆'); return; }
+      var html = list.map(function (m) {
+        return '<div class="ck-list-item" style="display:flex;gap:8px;align-items:flex-start">' +
+          '<div style="flex:1;min-width:0;word-break:break-word">' + esc(m.text) + '</div>' +
+          '<span class="ck-btn-text" data-del="' + esc(m.id) + '" style="flex-shrink:0">删除</span></div>';
+      }).join('');
+      setList('mem-list', html);
+      document.querySelectorAll('#mem-list [data-del]').forEach(function (el) {
+        el.onclick = function () { shellAPI.deleteMemory(el.dataset.del).then(loaders.memories); };
+      });
+    });
+    var cb = document.getElementById('mem-enabled');
+    if (cb) cb.onchange = function () { shellAPI.setMemoriesEnabled(cb.checked); };
+  };
+
+  // ================= 快照 =================
+  loaders.snapshots = function () {
+    setList('snap-list', '<div class="ck-list-empty">加载中…</div>');
+    shellAPI.listSnapshots().then(function (r) {
+      var list = (r && r.snapshots) || [];
+      if (!list.length) { empty('snap-list', '还没有快照'); return; }
+      var html = list.map(function (s) {
+        return '<div class="ck-list-item"><div style="font-size:12.5px;color:var(--ck-text)">' + esc(s.name) + '</div>' +
+          '<div style="font-size:11px;color:var(--ck-text-dim);margin-top:3px">' + esc(baseName(s.projectDir)) + ' · ' + (s.fileCount || 0) + ' 个文件</div></div>';
+      }).join('');
+      setList('snap-list', html);
+    });
+    var rb = document.getElementById('snap-refresh'); if (rb) rb.onclick = loaders.snapshots;
+  };
+
+  // ================= 技能 =================
+  loaders.skills = function () {
+    setList('skills-list', '<div class="ck-list-empty">加载中…</div>');
+    shellAPI.listSkills().then(function (r) {
+      var list = (r && r.skills) || (Array.isArray(r) ? r : []);
+      if (!list.length) { empty('skills-list', '还没有技能'); return; }
+      var html = list.map(function (s) {
+        return '<div class="ck-list-item"><div style="font-size:12.5px;color:var(--ck-text)">' + esc(s.name) + '</div>' +
+          (s.description ? '<div style="font-size:11px;color:var(--ck-text-dim);margin-top:3px">' + esc(s.description) + '</div>' : '') + '</div>';
+      }).join('');
+      setList('skills-list', html);
+    });
+    var rb = document.getElementById('skills-refresh'); if (rb) rb.onclick = loaders.skills;
+  };
+
+  // ================= 插件 =================
+  loaders.plugins = function () {
+    setList('plugin-installed', '<div class="ck-list-empty">加载中…</div>');
+    shellAPI.listInstalledPlugins().then(function (r) {
+      var list = (r && (r.plugins || r.list)) || (Array.isArray(r) ? r : []);
+      if (!list.length) { empty('plugin-installed', '还没有安装插件'); return; }
+      var html = list.map(function (p) {
+        var on = p.enabled !== false;
+        return '<div class="ck-list-item" style="display:flex;align-items:center;gap:8px">' +
+          '<div style="flex:1;min-width:0"><div style="font-size:12.5px;color:var(--ck-text)">' + esc(p.name || p.id) + '</div>' +
+          '<div style="font-size:11px;color:var(--ck-text-dim);margin-top:2px">' + esc(p.id || '') + '</div></div>' +
+          '<label class="ck-btn-text" style="flex-shrink:0"><input type="checkbox" data-toggle="' + esc(p.id) + '" ' + (on ? 'checked' : '') + '></label></div>';
+      }).join('');
+      setList('plugin-installed', html);
+      document.querySelectorAll('#plugin-installed [data-toggle]').forEach(function (el) {
+        el.onchange = function () { shellAPI.pluginSetEnabled(el.dataset.toggle, el.checked); };
+      });
+    });
+  };
+
+  // ================= 设置 =================
+  loaders.settings = function () {
+    var body = document.getElementById('settings-form') || document.querySelector('[data-panel="settings"]');
+    if (!body) return;
+    shellAPI.getSettings().then(function (r) {
+      var s = (r && (r.settings || r.data)) || {};
+      body.innerHTML = '';
+      var wrap = document.createElement('div');
+      wrap.className = 'ck-card';
+      wrap.innerHTML = '<div class="ck-label">设置项（JSON）</div>' +
+        '<textarea id="m-settings-json" style="width:100%;min-height:220px;font-family:ui-monospace,monospace;font-size:11px;padding:8px;border:1px solid var(--ck-border);border-radius:8px;background:var(--ck-surface);color:var(--ck-text)"></textarea>' +
+        '<button class="ck-btn ck-btn-primary" id="m-settings-save" style="margin-top:10px">保存</button>';
+      body.appendChild(wrap);
+      var ta = document.getElementById('m-settings-json');
+      ta.value = JSON.stringify(s, null, 2);
+      document.getElementById('m-settings-save').onclick = function () {
+        try { var obj = JSON.parse(ta.value); shellAPI.saveSettings(obj); } catch (e) { alert('JSON 格式错误：' + e.message); }
+      };
+    });
+  };
+
+  // ================= 顶部返回 / 状态 =================
+  document.getElementById('m-back').onclick = function () {
+    // 返回到默认页（工作区）
+    activate('workspaces');
+    if (loaders.workspaces) loaders.workspaces();
+  };
+
+  // ================= 启动 =================
+  connect();
+  activate('workspaces');
+  // 等连接就绪后加载
+  var t = setInterval(function () { if (ready) { clearInterval(t); loaders.workspaces(); } }, 300);
+})();
+
+</script>
+</body>
+</html>
