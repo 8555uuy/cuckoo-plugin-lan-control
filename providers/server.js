@@ -419,6 +419,8 @@ try {
   };
   // 主进程 → 插件：AI 事件（供 WS 广播给手机）
   table[PLUGIN_ID + ':onEvent'] = function (payload) {
+    const n = wsBridge ? wsBridge.clientCount() : 0;
+    dlog('onEvent 到达 type=' + (payload && payload.type) + ' 客户端=' + n);
     if (wsBridge) {
       try { wsBridge.broadcast(payload); } catch (_) { /* ignore */ }
     }
