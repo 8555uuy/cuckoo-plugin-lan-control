@@ -6,18 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <title>Cuckoo</title>
 <script>
-window.__lcBoot=1;
-window.addEventListener("error",function(e){
-  var b=document.getElementById("m-boot")||(function(){var x=document.createElement("div");x.id="m-boot";document.documentElement.appendChild(x);return x;})();
-  b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:999999;background:#b91c1c;color:#fff;font:12px/1.5 monospace;padding:10px;white-space:pre-wrap;max-height:60%;overflow:auto";
-  b.textContent="JS错误: "+(e.message||e.error)+"
-"+(e.filename||"")+":"+(e.lineno||"");
-});
-window.addEventListener("unhandledrejection",function(e){
-  var b=document.getElementById("m-boot")||(function(){var x=document.createElement("div");x.id="m-boot";document.documentElement.appendChild(x);return x;})();
-  b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:999999;background:#b45309;color:#fff;font:12px/1.5 monospace;padding:10px;white-space:pre-wrap;max-height:60%;overflow:auto";
-  b.textContent="Promise错误: "+((e.reason&&(e.reason.message||e.reason))||e);
-});
+window.__lcBoot=1;window.onerror=function(m,src,ln){var b=document.getElementById("m-boot");if(b){b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:999999;background:#b91c1c;color:#fff;font:12px/1.5 monospace;padding:10px;white-space:pre-wrap;max-height:60%;overflow:auto";b.textContent="JS错误: "+m+"  @"+(src||"")+":"+ln;}};window.addEventListener("unhandledrejection",function(e){var b=document.getElementById("m-boot");if(b){b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:999999;background:#b45309;color:#fff;font:12px/1.5 monospace;padding:10px;white-space:pre-wrap;max-height:60%;overflow:auto";b.textContent="Promise: "+((e.reason&&(e.reason.message||e.reason))||e);}});
 </script>
 <style>
 :root{--ck-bg:#16181d;--ck-bg-sub:#191c22;--ck-surface:rgba(255,255,255,.05);--ck-surface-hover:rgba(255,255,255,.09);--ck-border:rgba(255,255,255,.1);--ck-border-strong:rgba(255,255,255,.16);--ck-primary:#6b83ff;--ck-primary-strong:#8b9dff;--ck-primary-soft:rgba(107,131,255,.16);--ck-text:#e6e8eb;--ck-text-2:#a8adba;--ck-text-dim:#757b8a;--ck-danger:#ff6369;--ck-green:#46b47e;--ck-shadow-sm:none;--ck-shadow:none;}
