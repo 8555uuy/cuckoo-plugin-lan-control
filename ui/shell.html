@@ -2016,6 +2016,8 @@ html,body{background:#16181d!important;color:#e6e8eb!important;}
   var wrap = document.createElement('div');
   wrap.className = 'm-wrap';
   var curAi = null, curThink = null, curTurn = null, toolMap = {}, busy = false, lastAi = '';
+  // 当前会话 id（null=尚未确定）。手机端据此过滤事件，避免不同对话的消息串门。
+  var curSessionId = null;
 
   function atBottom() { return $stream.scrollHeight - $stream.scrollTop - $stream.clientHeight < 80; }
   function toBottom() { $stream.scrollTop = $stream.scrollHeight; }
@@ -2082,11 +2084,25 @@ html,body{background:#16181d!important;color:#e6e8eb!important;}
     var t = m.type;
     // 诊断：把收到的事件类型显示在状态栏 title（长按可见）
     try { window.__lcLastEvent = t; } catch (_) {}
+    // ===== 会话隔离（防串门）=====
+    var evSid = (m.sessionId === undefined || m.sessionId === null) ? null : String(m.sessionId);
     if (t === 'session-changed') {
-      // 会话切换 → 清空当前对话流（避免与上一个会话混在一起）
-      if (m.sessionId === undefined || m.sessionId === null) return;
+      if (evSid === null) return;
+      if (curSessionId !== null && evSid === curSessionId) return; // 同会话，不重复清空
+      curSessionId = evSid;
       resetStream(true, '已切换会话');
-    } else if (t === 'stream') {
+      return;
+    }
+    if (evSid !== null) {
+      if (curSessionId === null) {
+        curSessionId = evSid;                 // 首次确定当前会话
+      } else if (evSid !== curSessionId) {
+        // 事件属于别的会话（session-changed 可能未到达）→ 自动切换、清空
+        curSessionId = evSid;
+        resetStream(true, '已切换会话');
+      }
+    }
+    if (t === 'stream') {
       var tk = String(m.think || '').trim();
       if (tk) { if (!curThink) curThink = thinkEl(); curThink.body.textContent = tk; }
       else if (curThink) { curThink.wrap.classList.remove('open'); }
@@ -2140,7 +2156,11 @@ html,body{background:#16181d!important;color:#e6e8eb!important;}
     }, '还没有会话');
     setTimeout(function () {
       document.querySelectorAll('#ws-list .ck-list-item').forEach(function (el) {
-        el.onclick = function () { window.__lcCurSession = el.dataset.sid; shellAPI.navigateSession(el.dataset.sid); };
+        el.onclick = function () {
+          curSessionId = el.dataset.sid;                 // 立刻切到目标会话
+          resetStream(true, '正在切换会话…');            // 立即清空，避免旧会话残留
+          shellAPI.navigateSession(el.dataset.sid);
+        };
       });
     }, 400);
   };
